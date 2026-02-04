@@ -51,12 +51,12 @@ export const getAllWorkOrders = async (options = {}) => {
   }
 
   if (startDate) {
-    conditions.push('wo.work_date >= ?');
+    conditions.push('DATE(wo.created_at) >= ?');
     params.push(startDate);
   }
 
   if (endDate) {
-    conditions.push('wo.work_date <= ?');
+    conditions.push('DATE(wo.created_at) <= ?');
     params.push(endDate);
   }
 

@@ -21,8 +21,9 @@ import { AppError } from '../middleware/error.middleware.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
 
 /**
- * 작업지시서 업로드 및 처리
+ * 작업지시서 업로드 및 처리 (수동 분류)
  * POST /api/v1/work-orders/upload
+ * Body: clientName (필수), siteName (선택), uploadedBy (필수)
  */
 export const uploadWorkOrder = asyncHandler(async (req, res) => {
   const startTime = Date.now();
@@ -34,37 +35,32 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
 
   const { buffer, originalname, mimetype } = req.file;
   
-  // 분류 전략 파라미터 (query string 또는 body)
-  const strategy = req.query.strategy || req.body.strategy || 'auto';
+  // 수동 입력 필드
+  const { clientName, siteName, uploadedBy } = req.body;
   
-  // 유효한 전략인지 검증
-  const validStrategies = ['auto', 'keyword', 'ai_text', 'ai_vision'];
-  if (!validStrategies.includes(strategy)) {
-    throw new AppError(`유효하지 않은 분류 전략입니다. 가능한 값: ${validStrategies.join(', ')}`, 400);
+  // 필수 필드 검증
+  if (!clientName || !clientName.trim()) {
+    throw new AppError('거래처명은 필수입니다.', 400);
+  }
+  
+  if (!uploadedBy || !uploadedBy.trim()) {
+    throw new AppError('전송자명은 필수입니다.', 400);
   }
 
   logger.info('작업지시서 업로드 시작', {
     originalFilename: originalname,
     fileSize: buffer.length,
     mimeType: mimetype,
-    strategy,
+    clientName,
+    siteName,
+    uploadedBy,
   });
 
   try {
     // 2) 이미지 처리 및 저장
     const imageResult = await imageProcessor.processAndSaveImage(buffer, originalname);
 
-    // 3) OCR 텍스트 추출
-    const ocrResult = await ocrService.extractText(imageResult.ocrPath);
-
-    // 4) 하이브리드 자동 분류 (키워드 → AI 텍스트 → AI Vision)
-    const classificationResult = await classificationService.classifyWorkOrder(
-      ocrResult.text,
-      imageResult.storagePath,
-      strategy
-    );
-
-    // 5) 작업지시서 DB 저장
+    // 3) 작업지시서 DB 저장 (수동 분류)
     const workOrderData = {
       uuid: imageResult.uuid,
       original_filename: imageResult.originalFilename,
@@ -73,30 +69,52 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
       mime_type: imageResult.mimeType,
       image_width: imageResult.imageWidth,
       image_height: imageResult.imageHeight,
-      client_id: classificationResult.clientId,
-      classification_method: classificationResult.method,
-      confidence_score: classificationResult.confidence,
-      reasoning: classificationResult.reasoning,
-      ocr_text: ocrResult.text,
-      work_date: classificationResult.workDate || null,
-      work_type: classificationResult.workType || null,
-      status: classificationResult.isAutoClassified ? 'classified' : 'pending',
-      api_cost_usd: classificationResult.apiCost || 0,
+      client_id: null, // 수동 입력이므로 null
+      classification_method: 'manual',
+      confidence_score: null,
+      reasoning: `수동 입력: ${clientName}`,
+      ocr_text: null,
+      work_date: null,
+      work_type: null,
+      status: 'classified',
+      api_cost_usd: 0,
       processing_time_ms: Date.now() - startTime,
+      uploaded_by: uploadedBy.trim(),
+      uploaded_from: 'web',
     };
 
     const workOrderId = await WorkOrderModel.createWorkOrder(workOrderData);
 
-    // 6) 응답
+    // 4) 응답
     res.status(201).json({
       success: true,
       data: {
         id: workOrderId,
         uuid: imageResult.uuid,
         originalFilename: imageResult.originalFilename,
-        classification: {
-          clientId: classificationResult.clientId,
-          clientName: classificationResult.clientName,
+        clientName: clientName.trim(),
+        siteName: siteName?.trim() || null,
+        uploadedBy: uploadedBy.trim(),
+        processingTimeMs: Date.now() - startTime,
+      },
+      error: null,
+    });
+
+    logger.info('작업지시서 생성 완료', {
+      workOrderId,
+      uuid: imageResult.uuid,
+      clientName,
+      processingTime: Date.now() - startTime,
+    });
+  } catch (error) {
+    logger.error('작업지시서 처리 실패', {
+      error: error.message,
+      stack: error.stack,
+      originalFilename: originalname,
+    });
+    throw error;
+  }
+});
           clientCode: classificationResult.clientCode,
           confidence: classificationResult.confidence,
           method: classificationResult.method,
