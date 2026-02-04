@@ -45,17 +45,22 @@ app.set('trust proxy', 1);
  */
 
 // Helmet: HTTP 헤더 보안 설정
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: false
+}));
 
-// CORS: Cross-Origin Resource Sharing 설정
-const corsOptions = {
-  origin: process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',')
-    : ['http://localhost:5173'],
-  credentials: process.env.CORS_CREDENTIALS === 'true',
-  optionsSuccessStatus: 200,
-};
-app.use(cors(corsOptions));
+// CORS: Cross-Origin Resource Sharing 설정 (완전 개방)
+app.use(cors({
+  origin: true,  // 모든 Origin 허용
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
+}));
+
+logger.info('🌐 CORS: 모든 Origin 허용 (개발 모드)');
 
 /**
  * ========================================
@@ -78,55 +83,35 @@ const limiter = rateLimit({
 });
 
 // API 엔드포인트에만 Rate Limiting 적용
-app.use('/api/', limiter);
+app.use('/api', limiter);
 
 /**
  * ========================================
- * 요청 처리 미들웨어
+ * Body Parser
  * ========================================
  */
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Body Parser: JSON 및 URL-encoded 데이터 파싱
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Compression: 응답 압축 (gzip)
+/**
+ * ========================================
+ * 압축
+ * ========================================
+ */
 app.use(compression());
 
-// 요청 로깅
+/**
+ * ========================================
+ * 요청 로깅
+ * ========================================
+ */
 app.use(requestLogger);
 
 /**
  * ========================================
- * 라우팅
+ * 라우트
  * ========================================
  */
-
-// 루트 경로 API 정보
-app.get('/', (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      message: '🚀 작업지시서 관리 시스템 API',
-      version: '1.0.0',
-      status: 'online',
-      documentation: {
-        health: '/health',
-        api: '/api/v1',
-        clients: '/api/v1/clients',
-        workOrders: '/api/v1/work-orders',
-        stats: '/api/v1/stats',
-      },
-      links: {
-        github: 'https://github.com/bawoo9800-ctrl/work-order-management-system',
-        health: `${req.protocol}://${req.get('host')}/health`,
-        api: `${req.protocol}://${req.get('host')}/api/v1`,
-      },
-    },
-    error: null,
-  });
-});
-
 app.use('/', routes);
 
 /**
@@ -135,22 +120,10 @@ app.use('/', routes);
  * ========================================
  */
 
-// 404 Not Found 핸들러
+// 404 핸들러
 app.use(notFoundHandler);
 
-// 글로벌 에러 핸들러
+// 전역 에러 핸들러
 app.use(globalErrorHandler);
-
-/**
- * ========================================
- * 앱 시작 로깅
- * ========================================
- */
-logger.info('Express 애플리케이션 초기화 완료', {
-  environment: process.env.NODE_ENV || 'development',
-  corsOrigins: corsOptions.origin,
-  rateLimitWindow: `${(parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000) / 60000}분`,
-  rateLimitMax: process.env.RATE_LIMIT_MAX_REQUESTS || 100,
-});
 
 export default app;
