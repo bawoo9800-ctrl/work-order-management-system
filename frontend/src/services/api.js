@@ -42,13 +42,10 @@ apiClient.interceptors.response.use(
  * 작업지시서 API
  */
 export const workOrderAPI = {
-  // 업로드
-  upload: async (file, strategy = 'auto') => {
-    const formData = new FormData();
-    formData.append('image', file);
-    
+  // 업로드 (수동 분류)
+  upload: async (formData) => {
     const response = await apiClient.post(
-      `/api/v1/work-orders/upload?strategy=${strategy}`,
+      `/api/v1/work-orders/upload`,
       formData,
       {
         headers: {

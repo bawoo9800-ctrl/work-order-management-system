@@ -1,16 +1,20 @@
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useNavigate } from 'react-router-dom';
-import { workOrderAPI } from '../services/api';
+import { workOrderAPI, clientAPI } from '../services/api';
 
 function UploadPage() {
   const navigate = useNavigate();
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
-  const [strategy, setStrategy] = useState('auto');
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  
+  // 수동 입력 필드
+  const [clientName, setClientName] = useState('');
+  const [siteName, setSiteName] = useState('');
+  const [uploadedBy, setUploadedBy] = useState('');
 
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles.length > 0) {
@@ -45,11 +49,28 @@ function UploadPage() {
       return;
     }
 
+    if (!clientName.trim()) {
+      setError('거래처명을 입력해주세요.');
+      return;
+    }
+
+    if (!uploadedBy.trim()) {
+      setError('전송자명을 입력해주세요.');
+      return;
+    }
+
     try {
       setUploading(true);
       setError(null);
       
-      const response = await workOrderAPI.upload(file, strategy);
+      // FormData 생성
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('clientName', clientName);
+      formData.append('siteName', siteName);
+      formData.append('uploadedBy', uploadedBy);
+      
+      const response = await workOrderAPI.upload(formData);
       
       setResult(response.data);
       setError(null);
@@ -67,12 +88,15 @@ function UploadPage() {
     setPreview(null);
     setResult(null);
     setError(null);
+    setClientName('');
+    setSiteName('');
+    setUploadedBy('');
   };
 
   return (
     <div className="upload-page">
       <h1>📤 작업지시서 업로드</h1>
-      <p className="text-muted">작업지시서 이미지를 업로드하면 자동으로 분류됩니다.</p>
+      <p className="text-muted">작업지시서 이미지를 업로드하고 정보를 입력하세요.</p>
 
       <div className="grid grid-2" style={{ marginTop: '2rem' }}>
         {/* 업로드 영역 */}
@@ -119,45 +143,56 @@ function UploadPage() {
           </div>
 
           <div className="card" style={{ marginTop: '1.5rem' }}>
-            <h2 className="card-title">2. 분류 전략 선택</h2>
+            <h2 className="card-title">2. 정보 입력</h2>
             
             <div className="form-group">
-              <select
-                value={strategy}
-                onChange={(e) => setStrategy(e.target.value)}
-                className="form-select"
-              >
-                <option value="auto">자동 (권장)</option>
-                <option value="keyword">키워드 매칭</option>
-                <option value="ai_text">AI 텍스트 분석</option>
-                <option value="ai_vision">AI Vision 분석</option>
-              </select>
+              <label className="form-label">거래처명 *</label>
+              <input
+                type="text"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                className="form-input"
+                placeholder="예: 삼성전자"
+                required
+              />
             </div>
 
-            <div className="strategy-info" style={{ marginTop: '1rem', padding: '1rem', background: 'var(--background)', borderRadius: '0.375rem' }}>
-              {strategy === 'auto' && (
-                <p className="text-sm">키워드 → AI 텍스트 → AI Vision 순서로 자동 시도</p>
-              )}
-              {strategy === 'keyword' && (
-                <p className="text-sm">빠르고 무료, 정확도 낮음</p>
-              )}
-              {strategy === 'ai_text' && (
-                <p className="text-sm">중간 정확도, 저렴한 API 비용</p>
-              )}
-              {strategy === 'ai_vision' && (
-                <p className="text-sm">높은 정확도, API 비용 발생</p>
-              )}
+            <div className="form-group">
+              <label className="form-label">현장명</label>
+              <input
+                type="text"
+                value={siteName}
+                onChange={(e) => setSiteName(e.target.value)}
+                className="form-input"
+                placeholder="예: 수원공장 A동"
+              />
             </div>
+
+            <div className="form-group">
+              <label className="form-label">전송자 *</label>
+              <input
+                type="text"
+                value={uploadedBy}
+                onChange={(e) => setUploadedBy(e.target.value)}
+                className="form-input"
+                placeholder="예: 홍길동"
+                required
+              />
+            </div>
+
+            <p className="text-sm text-muted" style={{ marginTop: '0.5rem' }}>
+              * 필수 입력 항목
+            </p>
           </div>
 
           <div style={{ marginTop: '1.5rem' }}>
             <button
               onClick={handleUpload}
-              disabled={!file || uploading}
+              disabled={!file || uploading || !clientName.trim() || !uploadedBy.trim()}
               className="btn btn-primary"
               style={{ width: '100%' }}
             >
-              {uploading ? '업로드 중...' : '📤 업로드 및 분류'}
+              {uploading ? '업로드 중...' : '📤 업로드'}
             </button>
             {file && !uploading && (
               <button
@@ -193,7 +228,7 @@ function UploadPage() {
             <div className="card" style={{ marginTop: '1.5rem' }}>
               <div className="loading">
                 <div className="spinner"></div>
-                <p>분류 중...</p>
+                <p>업로드 중...</p>
               </div>
             </div>
           )}
@@ -210,24 +245,11 @@ function UploadPage() {
               
               <div style={{ marginTop: '1rem' }}>
                 <p><strong>파일명:</strong> {result.originalFilename}</p>
-                <p><strong>처리 시간:</strong> {(result.processingTimeMs / 1000).toFixed(2)}초</p>
+                <p><strong>거래처명:</strong> {result.clientName}</p>
+                {result.siteName && <p><strong>현장명:</strong> {result.siteName}</p>}
+                <p><strong>전송자:</strong> {result.uploadedBy}</p>
+                <p><strong>업로드 시간:</strong> {new Date().toLocaleString('ko-KR')}</p>
               </div>
-
-              <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--background)', borderRadius: '0.375rem' }}>
-                <h3 style={{ marginBottom: '0.5rem' }}>분류 결과</h3>
-                <p><strong>방법:</strong> {result.classification.method}</p>
-                <p><strong>거래처:</strong> {result.classification.clientName || '미분류'}</p>
-                <p><strong>신뢰도:</strong> {(result.classification.confidence * 100).toFixed(1)}%</p>
-                <p><strong>분석:</strong> {result.classification.reasoning}</p>
-              </div>
-
-              {result.ocr && (
-                <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--background)', borderRadius: '0.375rem' }}>
-                  <h3 style={{ marginBottom: '0.5rem' }}>OCR 결과</h3>
-                  <p><strong>추출된 텍스트:</strong> {result.ocr.textLength}자</p>
-                  <p><strong>신뢰도:</strong> {result.ocr.confidence}%</p>
-                </div>
-              )}
 
               <div style={{ marginTop: '1.5rem' }}>
                 <button
