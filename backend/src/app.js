@@ -80,6 +80,15 @@ const limiter = rateLimit({
   },
   standardHeaders: true, // RateLimit-* 헤더 반환
   legacyHeaders: false, // X-RateLimit-* 헤더 비활성화
+  // Trust proxy 환경에서 클라이언트 IP 식별 방법 명시
+  keyGenerator: (req) => {
+    // X-Forwarded-For 헤더가 있으면 사용, 없으면 req.ip 사용
+    return req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip;
+  },
+  // 검증 스킵 (trust proxy가 이미 설정되어 있으므로)
+  validate: {
+    xForwardedForHeader: false, // X-Forwarded-For 검증 비활성화
+  }
 });
 
 // API 엔드포인트에만 Rate Limiting 적용
