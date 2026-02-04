@@ -137,3 +137,35 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# ========================================
+# 작업지시서 관리 시스템 전용
+# ========================================
+
+# 업로드된 파일
+backend/uploads/
+uploads/
+
+# 로그 파일
+backend/logs/
+logs/
+
+# 테스트 커버리지
+backend/coverage/
+frontend/coverage/
+
+# 빌드 출력
+backend/dist/
+frontend/dist/
+frontend/build/
+
+# IDE 설정
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS 파일
+.DS_Store
+Thumbs.db
