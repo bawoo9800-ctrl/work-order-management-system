@@ -72,7 +72,7 @@ export const analyzeWorkOrderImage = async (imagePath, clients = []) => {
 **등록된 거래처 목록**:
 ${clientList || '(거래처 정보 없음)'}
 
-**응답 형식** (반드시 JSON 형식으로):
+**응답 형식** (반드시 JSON 형식으로만 응답):
 {
   "clientName": "추출된 거래처명 (또는 null)",
   "clientCode": "매칭된 거래처 코드 (또는 null)",
@@ -82,6 +82,13 @@ ${clientList || '(거래처 정보 없음)'}
   "confidence": 0.85,
   "reasoning": "분석 근거 설명"
 }
+
+**절대 규칙**:
+1. 반드시 위 JSON 형식으로만 응답하세요.
+2. 작업지시서가 아니어도 JSON 형식을 유지하세요.
+3. 설명 문장을 추가하지 마세요.
+4. 예시: 작업지시서가 아닌 경우
+   {"clientName": null, "clientCode": null, "workDate": null, "workType": null, "notes": null, "confidence": 0, "reasoning": "작업지시서 이미지가 아닙니다"}
 
 **중요**: 
 - 거래처명은 등록된 목록에서 가장 유사한 것을 선택하세요.
@@ -121,16 +128,30 @@ ${clientList || '(거래처 정보 없음)'}
       // JSON 코드 블록 제거
       const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || 
                         content.match(/```\s*([\s\S]*?)\s*```/) ||
+                        content.match(/\{[\s\S]*\}/) ||
                         [null, content];
       
-      const jsonString = jsonMatch[1] || content;
+      const jsonString = jsonMatch[1] || jsonMatch[0] || content;
       analysisResult = JSON.parse(jsonString);
     } catch (parseError) {
       logger.error('GPT-4o 응답 파싱 실패', {
         content,
         error: parseError.message,
       });
-      throw new Error('AI 응답을 파싱할 수 없습니다.');
+      
+      // JSON 파싱 실패 시 기본 응답 반환 (에러 메시지 포함)
+      return {
+        clientName: null,
+        clientCode: null,
+        workDate: null,
+        workType: null,
+        notes: null,
+        confidence: 0,
+        reasoning: `AI 분석 결과: ${content.substring(0, 200)}`,
+        apiCost: calculateCost(response.usage),
+        processingTime,
+        usage: response.usage,
+      };
     }
 
     // API 사용량 계산
