@@ -115,41 +115,6 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
     throw error;
   }
 });
-          clientCode: classificationResult.clientCode,
-          confidence: classificationResult.confidence,
-          method: classificationResult.method,
-          reasoning: classificationResult.reasoning,
-          isAutoClassified: classificationResult.isAutoClassified,
-          workDate: classificationResult.workDate,
-          workType: classificationResult.workType,
-          notes: classificationResult.notes,
-          candidates: classificationResult.candidates,
-        },
-        ocr: {
-          textLength: ocrResult.text.length,
-          confidence: ocrResult.confidence,
-          wordCount: ocrResult.wordCount,
-        },
-        processingTimeMs: Date.now() - startTime,
-        apiCost: classificationResult.apiCost || 0,
-      },
-      error: null,
-    });
-
-    logger.info('작업지시서 업로드 완료', {
-      workOrderId,
-      uuid: imageResult.uuid,
-      clientId: classificationResult.clientId,
-      processingTime: `${Date.now() - startTime}ms`,
-    });
-  } catch (error) {
-    logger.error('작업지시서 업로드 실패', {
-      error: error.message,
-      originalFilename: originalname,
-    });
-    throw error;
-  }
-});
 
 /**
  * 작업지시서 목록 조회
