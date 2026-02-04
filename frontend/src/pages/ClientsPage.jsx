@@ -23,9 +23,18 @@ const ClientsPage = () => {
     setLoading(true);
     try {
       const response = await api.get('/api/v1/clients');
-      setClients(response.data.clients || []);
+      console.log('📊 API 응답:', response);
+      console.log('📋 응답 데이터:', response.data);
+      console.log('👥 거래처 목록:', response.data?.data?.clients);
+      
+      // API 응답 구조 확인
+      const clientsData = response.data?.data?.clients || response.data?.clients || [];
+      console.log('✅ 최종 거래처 데이터:', clientsData);
+      
+      setClients(clientsData);
     } catch (error) {
-      console.error('거래처 목록 조회 실패:', error);
+      console.error('❌ 거래처 목록 조회 실패:', error);
+      console.error('에러 상세:', error.response?.data);
       alert('거래처 목록을 불러올 수 없습니다.');
     } finally {
       setLoading(false);
@@ -36,9 +45,14 @@ const ClientsPage = () => {
   const fetchStats = async () => {
     try {
       const response = await api.get('/api/v1/clients/stats');
-      setStats(response.data.stats);
+      console.log('📊 통계 응답:', response.data);
+      
+      const statsData = response.data?.data?.stats || response.data?.stats || null;
+      console.log('📈 최종 통계:', statsData);
+      
+      setStats(statsData);
     } catch (error) {
-      console.error('통계 조회 실패:', error);
+      console.error('❌ 통계 조회 실패:', error);
     }
   };
   
@@ -50,10 +64,18 @@ const ClientsPage = () => {
   
   // 검색
   const filteredClients = clients.filter(
-    client =>
-      client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.code.toLowerCase().includes(searchQuery.toLowerCase())
+    client => {
+      if (!client || !client.name || !client.code) return false;
+      return (
+        client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        client.code.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
   );
+  
+  console.log('🔍 전체 거래처 수:', clients.length);
+  console.log('🔍 필터된 거래처 수:', filteredClients.length);
+  console.log('🔍 검색어:', searchQuery);
   
   // Excel 업로드
   const handleExcelUpload = async (event) => {
@@ -88,12 +110,21 @@ const ClientsPage = () => {
       clearInterval(progressInterval);
       setUploadProgress(100);
       
-      const { validRows, invalidRows, insertedCount } = response.data;
+      console.log('📤 업로드 응답:', response.data);
+      
+      // API 응답 구조 확인
+      const uploadData = response.data?.data || response.data || {};
+      const { validRows = 0, invalidRows = 0, insertedCount = 0 } = uploadData;
+      
+      console.log('✅ 업로드 결과:', { validRows, invalidRows, insertedCount });
+      
       setUploadStatus(`✅ 업로드 완료: ${insertedCount}개 등록 (유효: ${validRows}, 무효: ${invalidRows})`);
       
       // 목록 새로고침
+      console.log('🔄 목록 새로고침 시작...');
       await fetchClients();
       await fetchStats();
+      console.log('🔄 새로고침 완료');
       
       // 3초 후 상태 초기화
       setTimeout(() => {
