@@ -4,7 +4,7 @@
  * ========================================
  * 파일: src/config/database.js
  * 설명: MariaDB 연결 풀 생성 및 관리
- *       - 시놀로지 NAS MariaDB 연결
+ *       - Unix Socket 또는 TCP 연결 지원
  *       - Connection Pool 사용
  *       - 자동 재연결 처리
  *       - 쿼리 헬퍼 함수 제공
@@ -12,27 +12,62 @@
  */
 
 import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
 import logger from '../utils/logger.js';
+
+// 환경 변수 로드
+dotenv.config();
 
 /**
  * 데이터베이스 연결 설정
+ * Unix Socket 우선, 없으면 TCP 연결
  */
-const dbConfig = {
-  host: process.env.DB_HOST || '192.168.1.109',
-  port: parseInt(process.env.DB_PORT) || 3306,
-  user: process.env.DB_USER || 'work_order_user',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'work_order_management',
-  waitForConnections: true,
-  connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT) || 10,
-  queueLimit: 0,
-  connectTimeout: parseInt(process.env.DB_CONNECT_TIMEOUT) || 10000,
-  // MariaDB 최적화 설정
-  charset: 'utf8mb4',
-  timezone: '+09:00', // 한국 시간대
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 0,
-};
+const dbConfig = process.env.DB_SOCKET_PATH
+  ? {
+      // Unix Socket 연결 (NAS 로컬 환경)
+      socketPath: process.env.DB_SOCKET_PATH,
+      user: process.env.DB_USER || 'work_order_user',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'work_order_management',
+      waitForConnections: true,
+      connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT) || 10,
+      queueLimit: 0,
+      connectTimeout: parseInt(process.env.DB_CONNECT_TIMEOUT) || 10000,
+      // MariaDB 최적화 설정
+      charset: 'utf8mb4',
+      timezone: '+09:00',
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 0,
+    }
+  : {
+      // TCP 연결 (원격 환경)
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT) || 3306,
+      user: process.env.DB_USER || 'work_order_user',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'work_order_management',
+      waitForConnections: true,
+      connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT) || 10,
+      queueLimit: 0,
+      connectTimeout: parseInt(process.env.DB_CONNECT_TIMEOUT) || 10000,
+      // MariaDB 최적화 설정
+      charset: 'utf8mb4',
+      timezone: '+09:00',
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 0,
+    };
+
+// 연결 방식 로깅
+if (process.env.DB_SOCKET_PATH) {
+  logger.info('Unix Socket 연결 사용', {
+    socketPath: process.env.DB_SOCKET_PATH,
+  });
+} else {
+  logger.info('TCP 연결 사용', {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT) || 3306,
+  });
+}
 
 /**
  * Connection Pool 생성
@@ -41,12 +76,14 @@ let pool;
 
 try {
   pool = mysql.createPool(dbConfig);
-  logger.info('MariaDB Connection Pool 생성 완료', {
-    host: dbConfig.host,
-    port: dbConfig.port,
-    database: dbConfig.database,
-    connectionLimit: dbConfig.connectionLimit,
-  });
+  
+  const logConfig = { ...dbConfig };
+  if (logConfig.password) {
+    logConfig.passwordSet = true;
+    delete logConfig.password;
+  }
+  
+  logger.info('MariaDB Connection Pool 생성 완료', logConfig);
 } catch (error) {
   logger.error('MariaDB Connection Pool 생성 실패', {
     error: error.message,
@@ -78,169 +115,107 @@ export const testConnection = async () => {
 };
 
 /**
- * 쿼리 실행 헬퍼 (prepared statement 사용)
+ * 쿼리 실행 (복수 행 반환)
  * @param {string} sql - SQL 쿼리
- * @param {Array} params - 파라미터 배열
+ * @param {Array} params - 쿼리 파라미터
  * @returns {Promise<Array>} 쿼리 결과
  */
 export const query = async (sql, params = []) => {
-  const startTime = Date.now();
-  let connection;
-  
   try {
-    connection = await pool.getConnection();
-    const [rows] = await connection.execute(sql, params);
-    
-    const executionTime = Date.now() - startTime;
-    
-    // 성능 로깅 (DEBUG 레벨)
-    if (process.env.LOG_LEVEL === 'debug') {
-      logger.db(sql, executionTime, {
-        rowCount: Array.isArray(rows) ? rows.length : 0,
-        params: params.length,
-      });
-    }
-    
+    const [rows] = await pool.execute(sql, params);
     return rows;
   } catch (error) {
     logger.error('쿼리 실행 실패', {
-      sql: sql.substring(0, 200),
+      sql,
       params,
       error: error.message,
-      stack: error.stack,
     });
     throw error;
-  } finally {
-    if (connection) connection.release();
   }
 };
 
 /**
- * 트랜잭션 실행 헬퍼
- * @param {Function} callback - 트랜잭션 콜백 함수 (connection 인자 받음)
- * @returns {Promise<any>} 콜백 결과
- */
-export const transaction = async (callback) => {
-  const connection = await pool.getConnection();
-  
-  try {
-    await connection.beginTransaction();
-    logger.debug('트랜잭션 시작');
-    
-    const result = await callback(connection);
-    
-    await connection.commit();
-    logger.debug('트랜잭션 커밋 완료');
-    
-    return result;
-  } catch (error) {
-    await connection.rollback();
-    logger.error('트랜잭션 롤백', {
-      error: error.message,
-      stack: error.stack,
-    });
-    throw error;
-  } finally {
-    connection.release();
-  }
-};
-
-/**
- * 단일 레코드 조회
+ * 쿼리 실행 (단일 행 반환)
  * @param {string} sql - SQL 쿼리
- * @param {Array} params - 파라미터 배열
- * @returns {Promise<object|null>} 조회 결과 (없으면 null)
+ * @param {Array} params - 쿼리 파라미터
+ * @returns {Promise<object|null>} 쿼리 결과 (첫 번째 행)
  */
 export const queryOne = async (sql, params = []) => {
-  const rows = await query(sql, params);
-  return rows.length > 0 ? rows[0] : null;
+  try {
+    const [rows] = await pool.execute(sql, params);
+    return rows[0] || null;
+  } catch (error) {
+    logger.error('쿼리 실행 실패', {
+      sql,
+      params,
+      error: error.message,
+    });
+    throw error;
+  }
 };
 
 /**
- * INSERT 후 생성된 ID 반환
- * @param {string} sql - INSERT 쿼리
- * @param {Array} params - 파라미터 배열
- * @returns {Promise<number>} 생성된 ID
+ * INSERT 쿼리 실행
+ * @param {string} sql - SQL INSERT 쿼리
+ * @param {Array} params - 쿼리 파라미터
+ * @returns {Promise<number>} 생성된 레코드 ID
  */
 export const insert = async (sql, params = []) => {
-  const startTime = Date.now();
-  let connection;
-  
   try {
-    connection = await pool.getConnection();
-    const [result] = await connection.execute(sql, params);
-    
-    const executionTime = Date.now() - startTime;
-    
-    if (process.env.LOG_LEVEL === 'debug') {
-      logger.db(sql, executionTime, {
-        insertId: result.insertId,
-        affectedRows: result.affectedRows,
-      });
-    }
-    
+    const [result] = await pool.execute(sql, params);
     return result.insertId;
   } catch (error) {
     logger.error('INSERT 실행 실패', {
-      sql: sql.substring(0, 200),
+      sql,
       params,
       error: error.message,
-      stack: error.stack,
     });
     throw error;
-  } finally {
-    if (connection) connection.release();
   }
 };
 
 /**
- * UPDATE/DELETE 후 영향받은 행 수 반환
- * @param {string} sql - UPDATE/DELETE 쿼리
- * @param {Array} params - 파라미터 배열
+ * UPDATE/DELETE 쿼리 실행
+ * @param {string} sql - SQL UPDATE/DELETE 쿼리
+ * @param {Array} params - 쿼리 파라미터
  * @returns {Promise<number>} 영향받은 행 수
  */
 export const execute = async (sql, params = []) => {
-  const startTime = Date.now();
-  let connection;
-  
   try {
-    connection = await pool.getConnection();
-    const [result] = await connection.execute(sql, params);
-    
-    const executionTime = Date.now() - startTime;
-    
-    if (process.env.LOG_LEVEL === 'debug') {
-      logger.db(sql, executionTime, {
-        affectedRows: result.affectedRows,
-      });
-    }
-    
+    const [result] = await pool.execute(sql, params);
     return result.affectedRows;
   } catch (error) {
     logger.error('쿼리 실행 실패', {
-      sql: sql.substring(0, 200),
+      sql,
       params,
       error: error.message,
-      stack: error.stack,
     });
     throw error;
-  } finally {
-    if (connection) connection.release();
   }
+};
+
+/**
+ * 트랜잭션 시작
+ * @returns {Promise<object>} 연결 객체
+ */
+export const beginTransaction = async () => {
+  const connection = await pool.getConnection();
+  await connection.beginTransaction();
+  return connection;
 };
 
 /**
  * Connection Pool 종료
- * (애플리케이션 종료 시 호출)
  */
 export const closePool = async () => {
   try {
     await pool.end();
     logger.info('MariaDB Connection Pool 종료 완료');
   } catch (error) {
-    logger.error('MariaDB Connection Pool 종료 실패', {
+    logger.error('Connection Pool 종료 실패', {
       error: error.message,
     });
+    throw error;
   }
 };
 
@@ -253,13 +228,8 @@ export const getPoolStatus = () => {
     totalConnections: pool.pool._allConnections.length,
     freeConnections: pool.pool._freeConnections.length,
     queuedRequests: pool.pool._connectionQueue.length,
-    config: {
-      connectionLimit: dbConfig.connectionLimit,
-      host: dbConfig.host,
-      database: dbConfig.database,
-    },
   };
 };
 
-// Pool 기본 export
+// 기본 export
 export default pool;
