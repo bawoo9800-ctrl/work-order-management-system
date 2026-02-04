@@ -33,11 +33,21 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
   }
 
   const { buffer, originalname, mimetype } = req.file;
+  
+  // 분류 전략 파라미터 (query string 또는 body)
+  const strategy = req.query.strategy || req.body.strategy || 'auto';
+  
+  // 유효한 전략인지 검증
+  const validStrategies = ['auto', 'keyword', 'ai_text', 'ai_vision'];
+  if (!validStrategies.includes(strategy)) {
+    throw new AppError(`유효하지 않은 분류 전략입니다. 가능한 값: ${validStrategies.join(', ')}`, 400);
+  }
 
   logger.info('작업지시서 업로드 시작', {
     originalFilename: originalname,
     fileSize: buffer.length,
     mimeType: mimetype,
+    strategy,
   });
 
   try {
@@ -47,8 +57,12 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
     // 3) OCR 텍스트 추출
     const ocrResult = await ocrService.extractText(imageResult.ocrPath);
 
-    // 4) 키워드 기반 자동 분류
-    const classificationResult = await classificationService.classifyByKeywords(ocrResult.text);
+    // 4) 하이브리드 자동 분류 (키워드 → AI 텍스트 → AI Vision)
+    const classificationResult = await classificationService.classifyWorkOrder(
+      ocrResult.text,
+      imageResult.storagePath,
+      strategy
+    );
 
     // 5) 작업지시서 DB 저장
     const workOrderData = {
@@ -64,7 +78,10 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
       confidence_score: classificationResult.confidence,
       reasoning: classificationResult.reasoning,
       ocr_text: ocrResult.text,
+      work_date: classificationResult.workDate || null,
+      work_type: classificationResult.workType || null,
       status: classificationResult.isAutoClassified ? 'classified' : 'pending',
+      api_cost_usd: classificationResult.apiCost || 0,
       processing_time_ms: Date.now() - startTime,
     };
 
@@ -85,6 +102,9 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
           method: classificationResult.method,
           reasoning: classificationResult.reasoning,
           isAutoClassified: classificationResult.isAutoClassified,
+          workDate: classificationResult.workDate,
+          workType: classificationResult.workType,
+          notes: classificationResult.notes,
           candidates: classificationResult.candidates,
         },
         ocr: {
@@ -93,6 +113,7 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
           wordCount: ocrResult.wordCount,
         },
         processingTimeMs: Date.now() - startTime,
+        apiCost: classificationResult.apiCost || 0,
       },
       error: null,
     });

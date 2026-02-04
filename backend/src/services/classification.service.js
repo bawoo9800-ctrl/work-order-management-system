@@ -10,7 +10,8 @@
  * ========================================
  */
 
-import { searchClientsByKeywords } from '../models/client.model.js';
+import { searchClientsByKeywords, getAllClients } from '../models/client.model.js';
+import { analyzeWorkOrderImage, classifyByText } from './openai.service.js';
 import logger from '../utils/logger.js';
 
 /**
@@ -24,6 +25,253 @@ const CONFIDENCE_THRESHOLD = parseFloat(process.env.KEYWORD_CONFIDENCE_THRESHOLD
 const AUTO_CLASSIFICATION_MIN_CONFIDENCE = parseFloat(
   process.env.AUTO_CLASSIFICATION_MIN_CONFIDENCE || '0.8'
 );
+
+/**
+ * AI Vision 기반 분류 (GPT-4o Vision)
+ * @param {string} imagePath - 이미지 파일 경로
+ * @returns {Promise<object>} 분류 결과
+ */
+export const classifyByAIVision = async (imagePath) => {
+  const startTime = Date.now();
+
+  try {
+    logger.debug('AI Vision 분류 시작', { imagePath });
+
+    // 모든 거래처 목록 가져오기
+    const clients = await getAllClients();
+
+    // GPT-4o Vision으로 이미지 분석
+    const analysis = await analyzeWorkOrderImage(imagePath, clients);
+
+    // 거래처 코드로 매칭
+    let matchedClient = null;
+    if (analysis.clientCode) {
+      matchedClient = clients.find((c) => c.code === analysis.clientCode);
+    }
+
+    // 거래처명으로 매칭 (코드 매칭 실패 시)
+    if (!matchedClient && analysis.clientName) {
+      matchedClient = clients.find(
+        (c) => c.name.toLowerCase() === analysis.clientName.toLowerCase()
+      );
+    }
+
+    const confidence = analysis.confidence || 0;
+    const isHighConfidence = confidence >= AUTO_CLASSIFICATION_MIN_CONFIDENCE;
+
+    logger.info('AI Vision 분류 완료', {
+      clientId: matchedClient?.id,
+      clientName: analysis.clientName,
+      confidence: confidence.toFixed(3),
+      isAutoClassified: isHighConfidence,
+      apiCost: analysis.apiCost,
+    });
+
+    return {
+      success: matchedClient !== null,
+      clientId: matchedClient?.id || null,
+      clientName: analysis.clientName,
+      clientCode: analysis.clientCode,
+      workDate: analysis.workDate,
+      workType: analysis.workType,
+      notes: analysis.notes,
+      confidence,
+      method: 'ai_vision',
+      reasoning: analysis.reasoning,
+      isAutoClassified: isHighConfidence,
+      apiCost: analysis.apiCost,
+      processingTimeMs: Date.now() - startTime,
+    };
+  } catch (error) {
+    logger.error('AI Vision 분류 실패', {
+      error: error.message,
+      stack: error.stack,
+    });
+    
+    return {
+      success: false,
+      clientId: null,
+      confidence: 0,
+      method: 'ai_vision',
+      reasoning: `AI 분석 실패: ${error.message}`,
+      processingTimeMs: Date.now() - startTime,
+    };
+  }
+};
+
+/**
+ * AI 텍스트 기반 분류 (GPT-4o 텍스트)
+ * @param {string} ocrText - OCR 추출 텍스트
+ * @returns {Promise<object>} 분류 결과
+ */
+export const classifyByAIText = async (ocrText) => {
+  const startTime = Date.now();
+
+  try {
+    logger.debug('AI 텍스트 분류 시작', {
+      textLength: ocrText.length,
+    });
+
+    // 모든 거래처 목록 가져오기
+    const clients = await getAllClients();
+
+    // GPT-4o로 텍스트 분석
+    const analysis = await classifyByText(ocrText, clients);
+
+    // 거래처 코드로 매칭
+    let matchedClient = null;
+    if (analysis.clientCode) {
+      matchedClient = clients.find((c) => c.code === analysis.clientCode);
+    }
+
+    // 거래처명으로 매칭 (코드 매칭 실패 시)
+    if (!matchedClient && analysis.clientName) {
+      matchedClient = clients.find(
+        (c) => c.name.toLowerCase() === analysis.clientName.toLowerCase()
+      );
+    }
+
+    const confidence = analysis.confidence || 0;
+    const isHighConfidence = confidence >= AUTO_CLASSIFICATION_MIN_CONFIDENCE;
+
+    logger.info('AI 텍스트 분류 완료', {
+      clientId: matchedClient?.id,
+      clientName: analysis.clientName,
+      confidence: confidence.toFixed(3),
+      isAutoClassified: isHighConfidence,
+      apiCost: analysis.apiCost,
+    });
+
+    return {
+      success: matchedClient !== null,
+      clientId: matchedClient?.id || null,
+      clientName: analysis.clientName,
+      clientCode: analysis.clientCode,
+      workDate: analysis.workDate,
+      workType: analysis.workType,
+      confidence,
+      method: 'ai_text',
+      reasoning: analysis.reasoning,
+      isAutoClassified: isHighConfidence,
+      apiCost: analysis.apiCost,
+      processingTimeMs: Date.now() - startTime,
+    };
+  } catch (error) {
+    logger.error('AI 텍스트 분류 실패', {
+      error: error.message,
+      stack: error.stack,
+    });
+    
+    return {
+      success: false,
+      clientId: null,
+      confidence: 0,
+      method: 'ai_text',
+      reasoning: `AI 분석 실패: ${error.message}`,
+      processingTimeMs: Date.now() - startTime,
+    };
+  }
+};
+
+/**
+ * 하이브리드 분류 전략
+ * 1순위: 키워드 매칭 (빠르고 무료)
+ * 2순위: AI 텍스트 분석 (중간 속도, 저렴)
+ * 3순위: AI Vision 분석 (느리지만 정확, 비쌈)
+ * 
+ * @param {string} ocrText - OCR 추출 텍스트
+ * @param {string} imagePath - 이미지 파일 경로
+ * @param {string} strategy - 분류 전략 ('auto', 'keyword', 'ai_text', 'ai_vision')
+ * @returns {Promise<object>} 분류 결과
+ */
+export const classifyWorkOrder = async (ocrText, imagePath, strategy = 'auto') => {
+  const startTime = Date.now();
+
+  try {
+    logger.info('작업지시서 분류 시작', {
+      strategy,
+      textLength: ocrText?.length || 0,
+      imagePath,
+    });
+
+    // 전략별 분류 실행
+    if (strategy === 'keyword') {
+      // 키워드 매칭만
+      return await classifyByKeywords(ocrText);
+    }
+
+    if (strategy === 'ai_text') {
+      // AI 텍스트 분석만
+      return await classifyByAIText(ocrText);
+    }
+
+    if (strategy === 'ai_vision') {
+      // AI Vision 분석만
+      return await classifyByAIVision(imagePath);
+    }
+
+    // 'auto' 전략: 하이브리드 접근
+    // 1순위: 키워드 매칭 시도
+    const keywordResult = await classifyByKeywords(ocrText);
+    
+    if (keywordResult.success && keywordResult.confidence >= AUTO_CLASSIFICATION_MIN_CONFIDENCE) {
+      logger.info('키워드 매칭으로 분류 완료', {
+        clientId: keywordResult.clientId,
+        confidence: keywordResult.confidence,
+      });
+      return keywordResult;
+    }
+
+    // 2순위: AI 텍스트 분석 시도
+    logger.info('키워드 매칭 신뢰도 낮음 → AI 텍스트 분석 시도');
+    const aiTextResult = await classifyByAIText(ocrText);
+    
+    if (aiTextResult.success && aiTextResult.confidence >= AUTO_CLASSIFICATION_MIN_CONFIDENCE) {
+      logger.info('AI 텍스트 분석으로 분류 완료', {
+        clientId: aiTextResult.clientId,
+        confidence: aiTextResult.confidence,
+      });
+      return aiTextResult;
+    }
+
+    // 3순위: AI Vision 분석 시도 (마지막 수단)
+    logger.info('AI 텍스트 분석 신뢰도 낮음 → AI Vision 분석 시도');
+    const aiVisionResult = await classifyByAIVision(imagePath);
+
+    // 최종 결과 반환 (실패해도 반환)
+    const totalProcessingTime = Date.now() - startTime;
+    logger.info('하이브리드 분류 완료', {
+      finalMethod: aiVisionResult.method,
+      success: aiVisionResult.success,
+      confidence: aiVisionResult.confidence,
+      totalProcessingTime,
+    });
+
+    return {
+      ...aiVisionResult,
+      processingTimeMs: totalProcessingTime,
+      attempts: {
+        keyword: keywordResult,
+        aiText: aiTextResult,
+        aiVision: aiVisionResult,
+      },
+    };
+  } catch (error) {
+    logger.error('작업지시서 분류 실패', {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return {
+      success: false,
+      clientId: null,
+      confidence: 0,
+      method: 'error',
+      reasoning: `분류 실패: ${error.message}`,
+      processingTimeMs: Date.now() - startTime,
+    };
+  }
+};
 
 /**
  * 키워드 기반 분류
