@@ -120,6 +120,14 @@ export const clientAPI = {
     return response.data;
   },
 
+  // 검색 (자동완성용)
+  search: async (query) => {
+    const response = await apiClient.get('/api/v1/clients/search', {
+      params: { q: query },
+    });
+    return response.data;
+  },
+
   // 상세 조회
   getById: async (id) => {
     const response = await apiClient.get(`/api/v1/clients/${id}`);

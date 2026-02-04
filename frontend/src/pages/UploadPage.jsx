@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useNavigate } from 'react-router-dom';
 import { workOrderAPI, clientAPI } from '../services/api';
@@ -15,6 +15,33 @@ function UploadPage() {
   const [clientName, setClientName] = useState('');
   const [siteName, setSiteName] = useState('');
   const [uploadedBy, setUploadedBy] = useState('');
+  
+  // 거래처 자동완성
+  const [clientSuggestions, setClientSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  
+  // 거래처 검색
+  useEffect(() => {
+    const searchClients = async () => {
+      if (clientName.trim().length < 1) {
+        setClientSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
+      
+      try {
+        const response = await clientAPI.search(clientName.trim());
+        setClientSuggestions(response.data.clients || []);
+        setShowSuggestions(true);
+      } catch (error) {
+        console.error('거래처 검색 실패:', error);
+        setClientSuggestions([]);
+      }
+    };
+    
+    const debounce = setTimeout(searchClients, 300);
+    return () => clearTimeout(debounce);
+  }, [clientName]);
 
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles.length > 0) {
@@ -91,6 +118,14 @@ function UploadPage() {
     setClientName('');
     setSiteName('');
     setUploadedBy('');
+    setClientSuggestions([]);
+    setShowSuggestions(false);
+  };
+  
+  // 거래처 선택
+  const handleSelectClient = (client) => {
+    setClientName(client.name);
+    setShowSuggestions(false);
   };
 
   return (
@@ -147,14 +182,34 @@ function UploadPage() {
             
             <div className="form-group">
               <label className="form-label">거래처명 *</label>
-              <input
-                type="text"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                className="form-input"
-                placeholder="예: 삼성전자"
-                required
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  onFocus={() => clientSuggestions.length > 0 && setShowSuggestions(true)}
+                  className="form-input"
+                  placeholder="예: 삼성전자"
+                  required
+                  autoComplete="off"
+                />
+                
+                {/* 자동완성 드롭다운 */}
+                {showSuggestions && clientSuggestions.length > 0 && (
+                  <div className="autocomplete-dropdown">
+                    {clientSuggestions.map((client) => (
+                      <div
+                        key={client.id}
+                        className="autocomplete-item"
+                        onClick={() => handleSelectClient(client)}
+                      >
+                        <strong>{client.name}</strong>
+                        <span className="client-code">{client.code}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="form-group">

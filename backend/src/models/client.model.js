@@ -261,3 +261,83 @@ export const getClientStats = async () => {
   const stats = await queryOne(sql);
   return stats;
 };
+
+/**
+ * 거래처 검색 (이름/코드로 검색)
+ * @param {string} searchTerm - 검색어
+ * @returns {Promise<Array>} 거래처 목록
+ */
+export const searchClients = async (searchTerm) => {
+  const sql = `
+    SELECT * FROM clients 
+    WHERE is_active = 1 
+      AND (name LIKE ? OR code LIKE ?)
+    ORDER BY priority ASC, name ASC
+    LIMIT 20
+  `;
+  
+  const searchPattern = `%${searchTerm}%`;
+  const clients = await query(sql, [searchPattern, searchPattern]);
+  
+  // JSON 필드 파싱
+  return clients.map(client => ({
+    ...client,
+    keywords: JSON.parse(client.keywords),
+    aliases: JSON.parse(client.aliases),
+    contact_info: client.contact_info ? JSON.parse(client.contact_info) : null,
+  }));
+};
+
+/**
+ * 모든 거래처 삭제 (하드 삭제)
+ * @returns {Promise<number>} 삭제된 행 수
+ */
+export const deleteAllClients = async () => {
+  const sql = 'DELETE FROM clients';
+  const affectedRows = await execute(sql);
+  
+  logger.warn('모든 거래처 삭제 완료', {
+    affectedRows,
+  });
+  
+  return affectedRows;
+};
+
+/**
+ * 거래처 일괄 등록
+ * @param {Array} clients - 거래처 배열
+ * @returns {Promise<number>} 등록된 행 수
+ */
+export const bulkCreateClients = async (clients) => {
+  if (clients.length === 0) return 0;
+  
+  // VALUES 절 생성
+  const values = clients
+    .map(
+      client =>
+        `(${[
+          `'${client.code.replace(/'/g, "''")}'`,
+          `'${client.name.replace(/'/g, "''")}'`,
+          `'${JSON.stringify(client.keywords).replace(/'/g, "''")}'`,
+          `'${JSON.stringify(client.aliases).replace(/'/g, "''")}'`,
+          client.contact_info ? `'${JSON.stringify(client.contact_info).replace(/'/g, "''")}'` : 'NULL',
+          client.priority,
+          client.notes ? `'${client.notes.replace(/'/g, "''")}'` : 'NULL',
+        ].join(', ')})`
+    )
+    .join(', ');
+  
+  const sql = `
+    INSERT INTO clients (code, name, keywords, aliases, contact_info, priority, notes)
+    VALUES ${values}
+  `;
+  
+  const affectedRows = await execute(sql);
+  
+  logger.info('거래처 일괄 등록 완료', {
+    count: clients.length,
+    affectedRows,
+  });
+  
+  return affectedRows;
+};

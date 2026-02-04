@@ -8,10 +8,17 @@
  */
 
 import express from 'express';
+import multer from 'multer';
 import * as clientController from '../controllers/client.controller.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
 
 const router = express.Router();
+
+// Multer 설정 (메모리 저장)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
 
 /**
  * @route   GET /api/v1/clients
@@ -22,11 +29,26 @@ const router = express.Router();
 router.get('/', asyncHandler(clientController.getClients));
 
 /**
+ * @route   GET /api/v1/clients/search
+ * @desc    거래처 검색 (자동완성용)
+ * @query   q=검색어
+ * @access  Public
+ */
+router.get('/search', asyncHandler(clientController.searchClients));
+
+/**
  * @route   GET /api/v1/clients/stats
  * @desc    거래처 통계 조회
  * @access  Public
  */
 router.get('/stats', asyncHandler(clientController.getClientStats));
+
+/**
+ * @route   POST /api/v1/clients/upload-excel
+ * @desc    Excel 파일로 거래처 대량 업로드
+ * @access  Public
+ */
+router.post('/upload-excel', upload.single('file'), asyncHandler(clientController.uploadExcel));
 
 /**
  * @route   GET /api/v1/clients/:id

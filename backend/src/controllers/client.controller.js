@@ -13,6 +13,7 @@
 import * as ClientModel from '../models/client.model.js';
 import { AppError } from '../middleware/error.middleware.js';
 import logger from '../utils/logger.js';
+import xlsx from 'xlsx';
 
 /**
  * 모든 거래처 조회
@@ -174,4 +175,133 @@ export const getClientStats = async (req, res) => {
     data: { stats },
     error: null,
   });
+};
+
+/**
+ * 거래처 검색 (자동완성용)
+ * GET /api/v1/clients/search?q=검색어
+ */
+export const searchClients = async (req, res) => {
+  const { q } = req.query;
+  
+  if (!q || q.trim().length === 0) {
+    return res.json({
+      success: true,
+      data: { clients: [] },
+      error: null,
+    });
+  }
+  
+  const searchTerm = q.trim();
+  const clients = await ClientModel.searchClients(searchTerm);
+  
+  res.json({
+    success: true,
+    data: {
+      clients,
+      count: clients.length,
+      query: searchTerm,
+    },
+    error: null,
+  });
+};
+
+/**
+ * Excel 파일로 거래처 대량 업로드
+ * POST /api/v1/clients/upload-excel
+ * Body: multipart/form-data (file: Excel 파일)
+ * 
+ * Excel 형식:
+ * - 컬럼 1: 사업자코드 (code)
+ * - 컬럼 2: 거래처명 (name)
+ */
+export const uploadExcel = async (req, res) => {
+  // 파일 확인
+  if (!req.file) {
+    throw new AppError('Excel 파일이 필요합니다.', 400);
+  }
+  
+  const file = req.file;
+  
+  logger.info('Excel 파일 업로드 시작', {
+    originalname: file.originalname,
+    mimetype: file.mimetype,
+    size: file.size,
+  });
+  
+  try {
+    // Excel 파일 읽기
+    const workbook = xlsx.read(file.buffer, { type: 'buffer' });
+    const firstSheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[firstSheetName];
+    
+    // JSON으로 변환 (헤더 행 제외)
+    const data = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+    
+    // 헤더 제거 (첫 행)
+    const rows = data.slice(1).filter(row => row.length >= 2);
+    
+    if (rows.length === 0) {
+      throw new AppError('Excel 파일에 데이터가 없습니다.', 400);
+    }
+    
+    logger.info('Excel 파싱 완료', {
+      totalRows: rows.length,
+      sample: rows[0],
+    });
+    
+    // 거래처 데이터 준비
+    const clientsToInsert = rows.map((row, index) => {
+      const code = String(row[0] || '').trim();
+      const name = String(row[1] || '').trim();
+      
+      if (!code || !name) {
+        logger.warn('유효하지 않은 행 스킵', { row: index + 2, code, name });
+        return null;
+      }
+      
+      return {
+        code,
+        name,
+        keywords: [name], // 거래처명을 기본 키워드로 추가
+        aliases: [],
+        contact_info: null,
+        priority: 100,
+        notes: `Excel 업로드 (${new Date().toISOString()})`,
+      };
+    }).filter(Boolean);
+    
+    logger.info('거래처 데이터 준비 완료', {
+      validRows: clientsToInsert.length,
+      invalidRows: rows.length - clientsToInsert.length,
+    });
+    
+    // 기존 거래처 전체 삭제 (하드 삭제)
+    const deletedCount = await ClientModel.deleteAllClients();
+    logger.info('기존 거래처 삭제 완료', { deletedCount });
+    
+    // 새 거래처 일괄 등록
+    const insertedCount = await ClientModel.bulkCreateClients(clientsToInsert);
+    logger.info('거래처 일괄 등록 완료', { insertedCount });
+    
+    res.json({
+      success: true,
+      data: {
+        message: '거래처 업로드 완료',
+        totalRows: rows.length,
+        validRows: clientsToInsert.length,
+        invalidRows: rows.length - clientsToInsert.length,
+        deletedCount,
+        insertedCount,
+      },
+      error: null,
+    });
+  } catch (error) {
+    logger.error('Excel 업로드 실패', {
+      error: error.message,
+      stack: error.stack,
+    });
+    
+    throw new AppError(`Excel 업로드 실패: ${error.message}`, 500);
+  }
 };
