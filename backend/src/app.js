@@ -93,6 +93,32 @@ app.use(requestLogger);
  * 라우팅
  * ========================================
  */
+
+// 루트 경로 API 정보
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      message: '🚀 작업지시서 관리 시스템 API',
+      version: '1.0.0',
+      status: 'online',
+      documentation: {
+        health: '/health',
+        api: '/api/v1',
+        clients: '/api/v1/clients',
+        workOrders: '/api/v1/work-orders',
+        stats: '/api/v1/stats',
+      },
+      links: {
+        github: 'https://github.com/bawoo9800-ctrl/work-order-management-system',
+        health: `${req.protocol}://${req.get('host')}/health`,
+        api: `${req.protocol}://${req.get('host')}/api/v1`,
+      },
+    },
+    error: null,
+  });
+});
+
 app.use('/', routes);
 
 /**

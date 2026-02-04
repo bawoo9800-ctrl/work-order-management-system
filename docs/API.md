@@ -1,45 +1,39 @@
-# API 문서 (API Documentation)
-
-작업지시서 관리 시스템 REST API v1.0.0
+# 작업지시서 관리 시스템 API 문서
 
 ## 📋 목차
+1. [개요](#개요)
+2. [인증](#인증)
+3. [응답 형식](#응답-형식)
+4. [에러 코드](#에러-코드)
+5. [API 엔드포인트](#api-엔드포인트)
+   - [헬스체크](#헬스체크)
+   - [거래처 관리](#거래처-관리)
+   - [작업지시서 관리](#작업지시서-관리)
+   - [통계](#통계)
 
-- [개요](#개요)
-- [인증](#인증)
-- [응답 형식](#응답-형식)
-- [에러 코드](#에러-코드)
-- [API 엔드포인트](#api-엔드포인트)
-  - [헬스체크](#헬스체크)
-  - [거래처 관리](#거래처-관리)
-  - [통계](#통계)
+---
 
 ## 개요
 
-### Base URL
+**Base URL**: `http://localhost:3200` (개발), `https://wo.doorlife.synology.me` (프로덕션)
 
-```
-개발 환경: http://localhost:3200
-프로덕션: http://192.168.1.109:3200
-```
+**API Version**: `v1`
 
-### Content-Type
+**Content-Type**: `application/json`
 
-모든 요청과 응답은 `application/json` 형식입니다.
-
-### Rate Limiting
-
-- **제한**: 15분당 100 요청
-- **초과 시**: HTTP 429 Too Many Requests
+---
 
 ## 인증
 
-현재 버전(v1.0.0)에서는 인증이 구현되지 않았습니다.  
-추후 JWT 기반 인증이 추가될 예정입니다.
+현재 버전에서는 인증이 필요하지 않습니다. (향후 JWT 추가 예정)
+
+---
 
 ## 응답 형식
 
-### 성공 응답
+모든 API 응답은 다음 형식을 따릅니다:
 
+### 성공 응답
 ```json
 {
   "success": true,
@@ -51,7 +45,6 @@
 ```
 
 ### 에러 응답
-
 ```json
 {
   "success": false,
@@ -59,47 +52,42 @@
   "error": {
     "message": "에러 메시지",
     "statusCode": 400,
-    "status": "fail"
+    "status": "fail",
+    "isOperational": true
   }
 }
 ```
 
+---
+
 ## 에러 코드
 
-| 코드 | 메시지 | 설명 |
-|------|--------|------|
-| 400 | Bad Request | 잘못된 요청 (필수 파라미터 누락, 유효하지 않은 데이터) |
-| 404 | Not Found | 리소스를 찾을 수 없음 |
-| 409 | Conflict | 중복된 리소스 (예: 이미 존재하는 거래처 코드) |
-| 429 | Too Many Requests | Rate Limit 초과 |
-| 500 | Internal Server Error | 서버 내부 오류 |
-| 503 | Service Unavailable | 서비스 이용 불가 (데이터베이스 연결 실패 등) |
+| 상태 코드 | 설명 |
+|---------|------|
+| `200` | 요청 성공 |
+| `201` | 리소스 생성 성공 |
+| `400` | 잘못된 요청 (Bad Request) |
+| `404` | 리소스를 찾을 수 없음 (Not Found) |
+| `429` | 요청 제한 초과 (Too Many Requests) |
+| `500` | 서버 내부 오류 (Internal Server Error) |
 
 ---
 
 ## API 엔드포인트
 
-## 헬스체크
+### 헬스체크
 
-### 서버 상태 확인
+#### `GET /health`
+서버 상태 확인
 
-서버 및 데이터베이스 연결 상태를 확인합니다.
-
-**요청**
-
-```http
-GET /health
-```
-
-**응답 (200 OK)**
-
+**응답 예시**:
 ```json
 {
   "success": true,
   "data": {
     "status": "healthy",
-    "timestamp": "2026-02-04T12:00:00.000Z",
-    "responseTime": "15ms",
+    "timestamp": "2026-02-04T09:04:58.548Z",
+    "responseTime": 2,
     "server": {
       "environment": "development",
       "port": 3200,
@@ -108,69 +96,36 @@ GET /health
     "database": {
       "connected": true,
       "pool": {
-        "totalConnections": 2,
-        "freeConnections": 2,
-        "queuedRequests": 0,
-        "config": {
-          "connectionLimit": 10,
-          "host": "192.168.1.109",
-          "database": "work_order_management"
-        }
+        "totalConnections": 1,
+        "freeConnections": 1,
+        "queuedRequests": 0
       }
     },
     "system": {
       "platform": "linux",
       "arch": "x64",
       "cpus": 4,
-      "totalMemory": "16.00 GB",
-      "freeMemory": "8.50 GB",
-      "uptime": "72.50 hours",
-      "nodeVersion": "v18.17.0"
+      "totalMemory": "1.71 GB",
+      "freeMemory": "0.51 GB",
+      "uptime": "15.80 hours",
+      "nodeVersion": "v20.19.5"
     }
   },
   "error": null
 }
 ```
 
-**응답 (503 Service Unavailable) - 데이터베이스 연결 실패**
-
-```json
-{
-  "success": false,
-  "data": {
-    "status": "unhealthy",
-    "database": {
-      "connected": false
-    }
-  },
-  "error": {
-    "message": "데이터베이스 연결 실패"
-  }
-}
-```
-
 ---
 
-## 거래처 관리
+### 거래처 관리
 
-### 1. 모든 거래처 조회
+#### `GET /api/v1/clients`
+모든 거래처 조회
 
-활성 또는 모든 거래처 목록을 조회합니다.
+**쿼리 파라미터**:
+- `activeOnly` (boolean, 기본: true): 활성 거래처만 조회
 
-**요청**
-
-```http
-GET /api/v1/clients?active=true
-```
-
-**Query Parameters**
-
-| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
-|----------|------|------|--------|------|
-| active | boolean | X | true | true: 활성 거래처만, false: 모든 거래처 |
-
-**응답 (200 OK)**
-
+**응답 예시**:
 ```json
 {
   "success": true,
@@ -180,18 +135,11 @@ GET /api/v1/clients?active=true
         "id": 1,
         "code": "SAMSUNG_ELEC",
         "name": "삼성전자",
-        "keywords": ["삼성", "삼성전자", "Samsung", "SAMSUNG"],
-        "aliases": ["삼성전자 주식회사", "Samsung Electronics Co., Ltd."],
-        "contact_info": {
-          "phone": "1588-3366",
-          "website": "https://www.samsung.com/sec/",
-          "address": "경기도 수원시 영통구 삼성로 129"
-        },
-        "is_active": true,
+        "keywords": ["삼성전자", "삼성", "SAMSUNG", "반도체", "전자"],
+        "aliases": ["삼성", "SEC", "Samsung Electronics"],
+        "is_active": 1,
         "priority": 10,
-        "notes": "국내 최대 전자제품 제조업체",
-        "created_at": "2026-02-04T03:00:00.000Z",
-        "updated_at": "2026-02-04T03:00:00.000Z"
+        "created_at": "2026-02-04T08:36:29.000Z"
       }
     ],
     "count": 5
@@ -200,26 +148,10 @@ GET /api/v1/clients?active=true
 }
 ```
 
----
+#### `GET /api/v1/clients/:id`
+거래처 상세 조회
 
-### 2. 특정 거래처 조회
-
-ID로 특정 거래처 정보를 조회합니다.
-
-**요청**
-
-```http
-GET /api/v1/clients/:id
-```
-
-**Path Parameters**
-
-| 파라미터 | 타입 | 필수 | 설명 |
-|----------|------|------|------|
-| id | integer | O | 거래처 ID |
-
-**응답 (200 OK)**
-
+**응답 예시**:
 ```json
 {
   "success": true,
@@ -228,331 +160,238 @@ GET /api/v1/clients/:id
       "id": 1,
       "code": "SAMSUNG_ELEC",
       "name": "삼성전자",
-      "keywords": ["삼성", "삼성전자", "Samsung"],
-      "aliases": ["삼성전자 주식회사"],
+      "keywords": ["삼성전자", "삼성", "SAMSUNG"],
+      "aliases": ["삼성", "SEC"],
       "contact_info": {
-        "phone": "1588-3366"
+        "phone": "02-1234-5678",
+        "email": "contact@samsung.com"
       },
-      "is_active": true,
       "priority": 10,
+      "is_active": 1,
       "notes": null,
-      "created_at": "2026-02-04T03:00:00.000Z",
-      "updated_at": "2026-02-04T03:00:00.000Z"
+      "created_at": "2026-02-04T08:36:29.000Z",
+      "updated_at": "2026-02-04T08:36:29.000Z"
     }
   },
   "error": null
 }
 ```
 
-**응답 (404 Not Found)**
+#### `POST /api/v1/clients`
+거래처 생성
 
+**요청 바디**:
 ```json
 {
-  "success": false,
-  "data": null,
-  "error": {
-    "message": "거래처를 찾을 수 없습니다.",
-    "statusCode": 404,
-    "status": "fail"
-  }
-}
-```
-
----
-
-### 3. 거래처 생성
-
-새로운 거래처를 생성합니다.
-
-**요청**
-
-```http
-POST /api/v1/clients
-Content-Type: application/json
-```
-
-**Request Body**
-
-```json
-{
-  "code": "TEST_COMPANY",
-  "name": "테스트 회사",
+  "code": "TEST_CLIENT",
+  "name": "테스트 거래처",
   "keywords": ["테스트", "test", "TEST"],
-  "aliases": ["테스트 주식회사", "Test Company Ltd."],
+  "aliases": ["테스트사", "Test Co."],
   "contact_info": {
-    "phone": "02-1234-5678",
-    "email": "contact@test.com",
-    "address": "서울특별시 강남구"
+    "phone": "02-1111-2222",
+    "email": "test@example.com"
   },
   "priority": 100,
   "notes": "테스트용 거래처"
 }
 ```
 
-**Request Body 필드**
-
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|------|------|
-| code | string | O | 거래처 코드 (UNIQUE, 50자 이하) |
-| name | string | O | 거래처 명칭 (200자 이하) |
-| keywords | array | O | 키워드 배열 (최소 1개) |
-| aliases | array | X | 별칭 배열 (기본: 빈 배열) |
-| contact_info | object | X | 연락처 정보 (JSON 객체) |
-| priority | integer | X | 우선순위 (기본: 100, 낮을수록 우선) |
-| notes | string | X | 비고 |
-
-**응답 (201 Created)**
-
+**응답 예시**:
 ```json
 {
   "success": true,
   "data": {
-    "client": {
-      "id": 6,
-      "code": "TEST_COMPANY",
-      "name": "테스트 회사",
-      "keywords": ["테스트", "test", "TEST"],
-      "aliases": ["테스트 주식회사"],
-      "contact_info": {
-        "phone": "02-1234-5678",
-        "email": "contact@test.com"
-      },
-      "is_active": true,
-      "priority": 100,
-      "notes": "테스트용 거래처",
-      "created_at": "2026-02-04T12:30:00.000Z",
-      "updated_at": "2026-02-04T12:30:00.000Z"
-    }
-  },
-  "error": null
-}
-```
-
-**응답 (400 Bad Request)**
-
-```json
-{
-  "success": false,
-  "data": null,
-  "error": {
-    "message": "거래처 코드와 이름은 필수입니다.",
-    "statusCode": 400,
-    "status": "fail"
-  }
-}
-```
-
-**응답 (409 Conflict)**
-
-```json
-{
-  "success": false,
-  "data": null,
-  "error": {
-    "message": "이미 존재하는 거래처 코드입니다.",
-    "statusCode": 409,
-    "status": "fail"
-  }
-}
-```
-
----
-
-### 4. 거래처 수정
-
-기존 거래처 정보를 수정합니다.
-
-**요청**
-
-```http
-PUT /api/v1/clients/:id
-Content-Type: application/json
-```
-
-**Path Parameters**
-
-| 파라미터 | 타입 | 필수 | 설명 |
-|----------|------|------|------|
-| id | integer | O | 거래처 ID |
-
-**Request Body** (수정할 필드만 포함)
-
-```json
-{
-  "name": "수정된 거래처명",
-  "keywords": ["새키워드", "updated"],
-  "is_active": true,
-  "priority": 50,
-  "notes": "수정된 비고"
-}
-```
-
-**수정 가능 필드**
-
-- `name`: 거래처 명칭
-- `keywords`: 키워드 배열
-- `aliases`: 별칭 배열
-- `contact_info`: 연락처 정보
-- `is_active`: 활성 상태
-- `priority`: 우선순위
-- `notes`: 비고
-
-**수정 불가 필드**
-
-- `code`: 거래처 코드 (생성 후 변경 불가)
-
-**응답 (200 OK)**
-
-```json
-{
-  "success": true,
-  "data": {
-    "client": {
-      "id": 6,
-      "code": "TEST_COMPANY",
-      "name": "수정된 거래처명",
-      "keywords": ["새키워드", "updated"],
-      "is_active": true,
-      "priority": 50,
-      "updated_at": "2026-02-04T13:00:00.000Z"
-    }
-  },
-  "error": null
-}
-```
-
-**응답 (404 Not Found)**
-
-```json
-{
-  "success": false,
-  "data": null,
-  "error": {
-    "message": "거래처를 찾을 수 없습니다.",
-    "statusCode": 404,
-    "status": "fail"
-  }
-}
-```
-
----
-
-### 5. 거래처 삭제 (소프트 삭제)
-
-거래처를 비활성화합니다 (is_active = false).  
-데이터는 삭제되지 않으며, 분류에서만 제외됩니다.
-
-**요청**
-
-```http
-DELETE /api/v1/clients/:id
-```
-
-**Path Parameters**
-
-| 파라미터 | 타입 | 필수 | 설명 |
-|----------|------|------|------|
-| id | integer | O | 거래처 ID |
-
-**응답 (200 OK)**
-
-```json
-{
-  "success": true,
-  "data": {
-    "message": "거래처가 비활성화되었습니다.",
+    "message": "거래처가 생성되었습니다.",
     "clientId": 6
   },
   "error": null
 }
 ```
 
-**응답 (404 Not Found)**
+#### `PUT /api/v1/clients/:id`
+거래처 수정
 
+**요청 바디**:
 ```json
 {
-  "success": false,
-  "data": null,
-  "error": {
-    "message": "거래처를 찾을 수 없습니다.",
-    "statusCode": 404,
-    "status": "fail"
-  }
+  "name": "수정된 거래처명",
+  "is_active": 1,
+  "priority": 50
 }
 ```
 
+#### `DELETE /api/v1/clients/:id`
+거래처 삭제 (소프트 삭제)
+
 ---
 
-### 6. 거래처 통계
+### 작업지시서 관리
 
-거래처 통계 정보를 조회합니다.
+#### `POST /api/v1/work-orders/upload`
+작업지시서 업로드 및 자동 처리 (이미지 → OCR → 자동 분류)
 
-**요청**
+**Content-Type**: `multipart/form-data`
 
-```http
-GET /api/v1/clients/stats
-```
+**Form Data**:
+- `image` (file, 필수): 작업지시서 이미지 파일 (jpg, jpeg, png, webp)
+- 최대 파일 크기: 10MB
 
-**응답 (200 OK)**
-
+**응답 예시**:
 ```json
 {
   "success": true,
   "data": {
-    "stats": {
-      "total_clients": 10,
-      "active_clients": 8,
-      "inactive_clients": 2
+    "id": 1,
+    "uuid": "a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6",
+    "originalFilename": "work_order_001.jpg",
+    "classification": {
+      "clientId": 1,
+      "clientName": "삼성전자",
+      "clientCode": "SAMSUNG_ELEC",
+      "confidence": 0.875,
+      "method": "keyword",
+      "reasoning": "키워드 매칭: 삼성전자, 삼성, SAMSUNG (3개 매칭)",
+      "isAutoClassified": true,
+      "candidates": [
+        {
+          "clientId": 1,
+          "clientName": "삼성전자",
+          "clientCode": "SAMSUNG_ELEC",
+          "confidence": 0.875,
+          "matchedKeywords": ["삼성전자", "삼성", "SAMSUNG"]
+        }
+      ]
+    },
+    "ocr": {
+      "textLength": 245,
+      "confidence": 92.5,
+      "wordCount": 38
+    },
+    "processingTimeMs": 2350
+  },
+  "error": null
+}
+```
+
+#### `GET /api/v1/work-orders`
+작업지시서 목록 조회 (페이징, 필터링)
+
+**쿼리 파라미터**:
+- `page` (number, 기본: 1): 페이지 번호
+- `limit` (number, 기본: 20): 페이지당 개수
+- `clientId` (number, 선택): 거래처 ID 필터
+- `status` (string, 선택): 상태 필터 (pending, classified, completed, failed)
+- `startDate` (string, 선택): 시작일 (YYYY-MM-DD)
+- `endDate` (string, 선택): 종료일 (YYYY-MM-DD)
+
+**응답 예시**:
+```json
+{
+  "success": true,
+  "data": {
+    "workOrders": [
+      {
+        "id": 1,
+        "uuid": "a1b2c3d4-...",
+        "original_filename": "work_order_001.jpg",
+        "client_id": 1,
+        "client_code": "SAMSUNG_ELEC",
+        "client_name": "삼성전자",
+        "classification_method": "keyword",
+        "confidence_score": 0.875,
+        "status": "classified",
+        "work_date": null,
+        "created_at": "2026-02-04T10:30:00.000Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 1,
+      "totalPages": 1
     }
   },
   "error": null
 }
 ```
 
----
+#### `GET /api/v1/work-orders/:id`
+작업지시서 상세 조회
 
-## 통계
-
-### 전체 시스템 통계 조회
-
-작업지시서, 거래처, API 비용 통계를 조회합니다.
-
-**요청**
-
-```http
-GET /api/v1/stats
-```
-
-**응답 (200 OK)**
-
+**응답 예시**:
 ```json
 {
   "success": true,
   "data": {
-    "workOrders": {
-      "total": 150,
-      "pending": 5,
-      "processing": 2,
-      "classified": 140,
-      "failed": 3,
-      "keyword_classified": 100,
-      "ai_text_classified": 30,
-      "ai_vision_classified": 10,
-      "manual_classified": 0,
-      "avg_confidence": 0.8523,
-      "avg_processing_time_ms": 2345,
-      "total_api_cost": 5.234500
-    },
-    "clients": {
-      "total_clients": 10,
-      "active_clients": 8
-    },
-    "todayApiUsage": {
-      "today_cost": 0.123400,
-      "today_calls": 15,
-      "today_tokens": 3500
-    },
-    "timestamp": "2026-02-04T13:30:00.000Z"
+    "workOrder": {
+      "id": 1,
+      "uuid": "a1b2c3d4-...",
+      "original_filename": "work_order_001.jpg",
+      "storage_path": "/volume1/work_orders/client_1/2026/02/a1b2c3d4.jpg",
+      "file_size": 245678,
+      "mime_type": "image/jpeg",
+      "image_width": 1920,
+      "image_height": 1080,
+      "client_id": 1,
+      "client_code": "SAMSUNG_ELEC",
+      "client_name": "삼성전자",
+      "classification_method": "keyword",
+      "confidence_score": 0.875,
+      "reasoning": "키워드 매칭: 삼성전자, 삼성 (2개 매칭)",
+      "ocr_text": "작업지시서 내용...",
+      "work_date": null,
+      "status": "classified",
+      "api_cost_usd": 0,
+      "processing_time_ms": 2350,
+      "created_at": "2026-02-04T10:30:00.000Z",
+      "updated_at": "2026-02-04T10:30:00.000Z"
+    }
+  },
+  "error": null
+}
+```
+
+#### `GET /api/v1/work-orders/uuid/:uuid`
+UUID로 작업지시서 조회
+
+#### `GET /api/v1/work-orders/recent`
+최근 작업지시서 조회
+
+**쿼리 파라미터**:
+- `limit` (number, 기본: 10): 조회 개수
+
+#### `PUT /api/v1/work-orders/:id`
+작업지시서 수정
+
+**요청 바디**:
+```json
+{
+  "client_id": 2,
+  "work_date": "2026-02-04",
+  "status": "completed"
+}
+```
+
+#### `DELETE /api/v1/work-orders/:id`
+작업지시서 삭제 (소프트 삭제)
+
+#### `POST /api/v1/work-orders/:id/reclassify`
+작업지시서 재분류 (수동)
+
+**요청 바디**:
+```json
+{
+  "clientId": 2
+}
+```
+
+**응답 예시**:
+```json
+{
+  "success": true,
+  "data": {
+    "message": "작업지시서가 재분류되었습니다.",
+    "clientId": 2
   },
   "error": null
 }
@@ -560,68 +399,96 @@ GET /api/v1/stats
 
 ---
 
-## cURL 예제
+### 통계
 
-### 헬스체크
+#### `GET /api/v1/stats`
+전체 시스템 통계
 
-```bash
-curl http://localhost:3200/health
+**응답 예시**:
+```json
+{
+  "success": true,
+  "data": {
+    "clients": {
+      "total_clients": 5,
+      "active_clients": 5,
+      "inactive_clients": 0
+    },
+    "workOrders": {
+      "total_orders": 10,
+      "pending_orders": 2,
+      "classified_orders": 7,
+      "completed_orders": 1,
+      "failed_orders": 0,
+      "avg_confidence": 0.82,
+      "total_api_cost": 0.05,
+      "avg_processing_time": 2250
+    }
+  },
+  "error": null
+}
 ```
 
-### 거래처 목록 조회
+#### `GET /api/v1/work-orders/stats/summary`
+작업지시서 통계
+
+#### `GET /api/v1/clients/stats`
+거래처 통계
+
+---
+
+## 사용 예시
+
+### cURL
 
 ```bash
-curl http://localhost:3200/api/v1/clients
-```
+# 헬스체크
+curl http://localhost:3200/health | jq
 
-### 거래처 생성
+# 거래처 목록
+curl http://localhost:3200/api/v1/clients | jq
 
-```bash
-curl -X POST http://localhost:3200/api/v1/clients \
+# 작업지시서 업로드
+curl -X POST http://localhost:3200/api/v1/work-orders/upload \
+  -F "image=@work_order.jpg" | jq
+
+# 작업지시서 목록 (페이징, 필터링)
+curl "http://localhost:3200/api/v1/work-orders?page=1&limit=10&clientId=1" | jq
+
+# 작업지시서 재분류
+curl -X POST http://localhost:3200/api/v1/work-orders/1/reclassify \
   -H "Content-Type: application/json" \
-  -d '{
-    "code": "NEW_CLIENT",
-    "name": "신규 거래처",
-    "keywords": ["신규", "테스트"],
-    "priority": 100
-  }'
+  -d '{"clientId": 2}' | jq
 ```
 
-### 거래처 수정
+### JavaScript (fetch)
 
-```bash
-curl -X PUT http://localhost:3200/api/v1/clients/6 \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "수정된 이름",
-    "priority": 50
-  }'
-```
+```javascript
+// 작업지시서 업로드
+const formData = new FormData();
+formData.append('image', fileInput.files[0]);
 
-### 거래처 삭제
+const response = await fetch('http://localhost:3200/api/v1/work-orders/upload', {
+  method: 'POST',
+  body: formData,
+});
 
-```bash
-curl -X DELETE http://localhost:3200/api/v1/clients/6
-```
-
-### 통계 조회
-
-```bash
-curl http://localhost:3200/api/v1/stats
+const result = await response.json();
+console.log(result);
 ```
 
 ---
 
-## 추후 추가 예정 API
+## Rate Limiting
 
-- `POST /api/v1/work-orders` - 작업지시서 업로드
-- `GET /api/v1/work-orders` - 작업지시서 목록 조회
-- `GET /api/v1/work-orders/:id` - 특정 작업지시서 조회
-- `PUT /api/v1/work-orders/:id/classify` - 수동 분류
-- `POST /api/v1/feedback` - 분류 피드백 제출
-- WebSocket 이벤트 (실시간 업데이트)
+API는 Rate Limiting이 적용되어 있습니다:
+- **Window**: 15분
+- **Max Requests**: 100 요청
+
+제한을 초과하면 `429 Too Many Requests` 응답이 반환됩니다.
 
 ---
 
-**Last Updated**: 2026-02-04  
-**Version**: 1.0.0
+## 문의
+
+- GitHub: https://github.com/bawoo9800-ctrl/work-order-management-system/issues

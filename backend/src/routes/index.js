@@ -9,6 +9,7 @@
 
 import express from 'express';
 import clientRoutes from './client.routes.js';
+import workOrderRoutes from './workOrder.routes.js';
 import * as healthController from '../controllers/health.controller.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
 
@@ -24,6 +25,7 @@ router.get('/health', asyncHandler(healthController.healthCheck));
  * API v1 라우트
  */
 router.use('/api/v1/clients', clientRoutes);
+router.use('/api/v1/work-orders', workOrderRoutes);
 router.get('/api/v1/stats', asyncHandler(healthController.getStats));
 
 /**
@@ -46,6 +48,17 @@ router.get('/api/v1', (req, res) => {
           update: 'PUT /api/v1/clients/:id',
           delete: 'DELETE /api/v1/clients/:id',
           stats: 'GET /api/v1/clients/stats',
+        },
+        workOrders: {
+          upload: 'POST /api/v1/work-orders/upload',
+          list: 'GET /api/v1/work-orders',
+          get: 'GET /api/v1/work-orders/:id',
+          getByUuid: 'GET /api/v1/work-orders/uuid/:uuid',
+          update: 'PUT /api/v1/work-orders/:id',
+          delete: 'DELETE /api/v1/work-orders/:id',
+          recent: 'GET /api/v1/work-orders/recent',
+          stats: 'GET /api/v1/work-orders/stats/summary',
+          reclassify: 'POST /api/v1/work-orders/:id/reclassify',
         },
       },
       documentation: '/docs/API.md',
