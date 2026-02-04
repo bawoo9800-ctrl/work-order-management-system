@@ -1,6 +1,6 @@
 # 🚀 배포 가이드
 
-## NAS 배포 절차
+## NAS 배포 절차 (최신 업데이트: 대시보드 개편)
 
 ### 1️⃣ 코드 업데이트
 
@@ -29,6 +29,87 @@ source /volume1/web/work-order-management-system/database/migrations/add_site_na
 
 **마이그레이션 내용:**
 - `work_orders` 테이블에 `site_name` 필드 추가 (현장명)
+
+---
+
+### 3️⃣ 백엔드 재시작
+
+```bash
+cd /volume1/web/work-order-management-system/backend
+
+# PM2로 재시작
+sudo /usr/local/bin/pm2 restart work-order-backend
+
+# 5초 대기
+sleep 5
+
+# 상태 확인
+sudo /usr/local/bin/pm2 status
+
+# 로그 확인 (최근 30줄)
+sudo /usr/local/bin/pm2 logs work-order-backend --lines 30 --nostream
+
+# 헬스 체크
+curl http://localhost:3200/health | jq '.data.status'
+```
+
+**기대 결과:**
+```json
+{
+  "success": true,
+  "data": {
+    "status": "healthy"
+  }
+}
+```
+
+---
+
+### 4️⃣ 프론트엔드 재시작
+
+```bash
+cd /volume1/web/work-order-management-system/frontend
+
+# PM2로 재시작
+sudo /usr/local/bin/pm2 restart work-order-frontend
+
+# 5초 대기
+sleep 5
+
+# 상태 확인
+sudo /usr/local/bin/pm2 status
+
+# 로그 확인
+sudo /usr/local/bin/pm2 logs work-order-frontend --lines 20 --nostream
+```
+
+---
+
+### 5️⃣ 접속 확인
+
+- **프론트엔드:** http://192.168.0.109:5173
+- **백엔드 API:** http://192.168.0.109:3200
+- **헬스체크:** http://192.168.0.109:3200/health
+
+---
+
+## 🎨 새로운 대시보드 기능
+
+### 카드형 레이아웃
+1. **A4 세로 비율** 이미지 카드
+2. **당일 작업지시서만 표시** (업로드 날짜 기준)
+3. **거래처 필터링** 가능
+
+### 좌측 거래처 리스트
+1. **검색 필드:** 거래처명 실시간 검색
+2. **클릭 필터링:** 거래처 클릭 시 해당 거래처 작업지시서만 표시
+3. **전체 보기:** 선택 해제 시 전체 표시
+
+### 카드 정보
+- 전송자
+- 전송 시간
+- 거래처명
+- 현장명
 
 ---
 
