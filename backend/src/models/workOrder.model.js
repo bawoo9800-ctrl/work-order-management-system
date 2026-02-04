@@ -183,7 +183,7 @@ export const createWorkOrder = async (workOrderData) => {
 
   const sql = `
     INSERT INTO work_orders (
-      uuid, original_filename, storage_path, file_size, mime_type,
+      uuid, original_filename, storage_path, file_size_bytes, mime_type,
       image_width, image_height, client_id, classification_method,
       confidence_score, reasoning, ocr_text, work_date, status,
       api_cost_usd, processing_time_ms
