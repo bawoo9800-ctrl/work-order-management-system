@@ -23,6 +23,7 @@ const HomePage = () => {
   const [zoomedImage, setZoomedImage] = useState(null);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [filteredClientNames, setFilteredClientNames] = useState([]);
+  const [imageCache, setImageCache] = useState(new Map());
   
   // 오늘 날짜 (YYYY-MM-DD)
   const today = new Date().toISOString().split('T')[0];
@@ -148,16 +149,25 @@ const HomePage = () => {
     setZoomedImage(null);
   };
   
-  // 이미지 URL 생성
+  // 이미지 URL 생성 (메모이제이션)
   const getImageUrl = (workOrder) => {
+    const cacheKey = workOrder.id;
+    if (imageCache.has(cacheKey)) {
+      return imageCache.get(cacheKey);
+    }
+    
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
     const storagePath = workOrder.storage_path || '';
     
+    let url;
     if (storagePath.startsWith('/uploads/')) {
-      return `${baseUrl}${storagePath}`;
+      url = `${baseUrl}${storagePath}`;
+    } else {
+      url = `${baseUrl}/uploads/${storagePath}`;
     }
     
-    return `${baseUrl}/uploads/${storagePath}`;
+    setImageCache(new Map(imageCache.set(cacheKey, url)));
+    return url;
   };
   
   // 시간 포맷팅
@@ -255,6 +265,8 @@ const HomePage = () => {
                   <img 
                     src={getImageUrl(order)} 
                     alt={order.original_filename}
+                    loading="lazy"
+                    decoding="async"
                     onError={(e) => {
                       e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="280"><rect width="200" height="280" fill="%23f5f5f5"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23999" font-size="14">이미지 없음</text></svg>';
                     }}
@@ -529,6 +541,8 @@ const HomePage = () => {
           cursor: default;
           position: relative;
           box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+          content-visibility: auto;
+          contain: layout style paint;
         }
         
         .work-order-card:hover {
@@ -551,10 +565,13 @@ const HomePage = () => {
           height: 100%;
           object-fit: contain;
           transition: transform 0.3s;
+          will-change: transform;
+          content-visibility: auto;
         }
         
         .card-image:hover img {
-          transform: scale(1.03);
+          transform: scale(1.03) translateZ(0);
+          backface-visibility: hidden;
         }
         
         .click-hint {
