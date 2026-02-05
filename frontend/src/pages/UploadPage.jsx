@@ -1,7 +1,7 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useNavigate } from 'react-router-dom';
-import { workOrderAPI, clientAPI } from '../services/api';
+import { workOrderAPI } from '../services/api';
 
 function UploadPage() {
   const navigate = useNavigate();
@@ -11,37 +11,8 @@ function UploadPage() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   
-  // 수동 입력 필드
-  const [clientName, setClientName] = useState('');
-  const [siteName, setSiteName] = useState('');
+  // 전송자 필드만 유지
   const [uploadedBy, setUploadedBy] = useState('');
-  
-  // 거래처 자동완성
-  const [clientSuggestions, setClientSuggestions] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  
-  // 거래처 검색
-  useEffect(() => {
-    const searchClients = async () => {
-      if (clientName.trim().length < 1) {
-        setClientSuggestions([]);
-        setShowSuggestions(false);
-        return;
-      }
-      
-      try {
-        const response = await clientAPI.search(clientName.trim());
-        setClientSuggestions(response.data.clients || []);
-        setShowSuggestions(true);
-      } catch (error) {
-        console.error('거래처 검색 실패:', error);
-        setClientSuggestions([]);
-      }
-    };
-    
-    const debounce = setTimeout(searchClients, 300);
-    return () => clearTimeout(debounce);
-  }, [clientName]);
 
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles.length > 0) {
@@ -76,11 +47,6 @@ function UploadPage() {
       return;
     }
 
-    if (!clientName.trim()) {
-      setError('거래처명을 입력해주세요.');
-      return;
-    }
-
     if (!uploadedBy.trim()) {
       setError('전송자명을 입력해주세요.');
       return;
@@ -90,11 +56,9 @@ function UploadPage() {
       setUploading(true);
       setError(null);
       
-      // FormData 생성
+      // FormData 생성 (거래처/현장명 제거)
       const formData = new FormData();
       formData.append('image', file);
-      formData.append('clientName', clientName);
-      formData.append('siteName', siteName);
       formData.append('uploadedBy', uploadedBy);
       
       const response = await workOrderAPI.upload(formData);
@@ -115,23 +79,13 @@ function UploadPage() {
     setPreview(null);
     setResult(null);
     setError(null);
-    setClientName('');
-    setSiteName('');
     setUploadedBy('');
-    setClientSuggestions([]);
-    setShowSuggestions(false);
-  };
-  
-  // 거래처 선택
-  const handleSelectClient = (client) => {
-    setClientName(client.name);
-    setShowSuggestions(false);
   };
 
   return (
     <div className="upload-page">
       <h1>📤 작업지시서 업로드</h1>
-      <p className="text-muted">작업지시서 이미지를 업로드하고 정보를 입력하세요.</p>
+      <p className="text-muted">작업지시서 이미지를 업로드하세요. 거래처/현장명은 홈 화면에서 수정할 수 있습니다.</p>
 
       <div className="grid grid-2" style={{ marginTop: '2rem' }}>
         {/* 업로드 영역 */}
@@ -178,51 +132,8 @@ function UploadPage() {
           </div>
 
           <div className="card" style={{ marginTop: '1.5rem' }}>
-            <h2 className="card-title">2. 정보 입력</h2>
+            <h2 className="card-title">2. 전송자 입력</h2>
             
-            <div className="form-group">
-              <label className="form-label">거래처명 *</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  onFocus={() => clientSuggestions.length > 0 && setShowSuggestions(true)}
-                  className="form-input"
-                  placeholder="예: 삼성전자"
-                  required
-                  autoComplete="off"
-                />
-                
-                {/* 자동완성 드롭다운 */}
-                {showSuggestions && clientSuggestions.length > 0 && (
-                  <div className="autocomplete-dropdown">
-                    {clientSuggestions.map((client) => (
-                      <div
-                        key={client.id}
-                        className="autocomplete-item"
-                        onClick={() => handleSelectClient(client)}
-                      >
-                        <strong>{client.name}</strong>
-                        <span className="client-code">{client.code}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">현장명</label>
-              <input
-                type="text"
-                value={siteName}
-                onChange={(e) => setSiteName(e.target.value)}
-                className="form-input"
-                placeholder="예: 수원공장 A동"
-              />
-            </div>
-
             <div className="form-group">
               <label className="form-label">전송자 *</label>
               <input
@@ -238,12 +149,15 @@ function UploadPage() {
             <p className="text-sm text-muted" style={{ marginTop: '0.5rem' }}>
               * 필수 입력 항목
             </p>
+            <p className="text-sm text-muted" style={{ marginTop: '0.25rem' }}>
+              💡 거래처/현장명은 홈 화면 카드에서 수정할 수 있습니다.
+            </p>
           </div>
 
           <div style={{ marginTop: '1.5rem' }}>
             <button
               onClick={handleUpload}
-              disabled={!file || uploading || !clientName.trim() || !uploadedBy.trim()}
+              disabled={!file || uploading || !uploadedBy.trim()}
               className="btn btn-primary"
               style={{ width: '100%' }}
             >
@@ -300,19 +214,17 @@ function UploadPage() {
               
               <div style={{ marginTop: '1rem' }}>
                 <p><strong>파일명:</strong> {result.originalFilename}</p>
-                <p><strong>거래처명:</strong> {result.clientName}</p>
-                {result.siteName && <p><strong>현장명:</strong> {result.siteName}</p>}
                 <p><strong>전송자:</strong> {result.uploadedBy}</p>
                 <p><strong>업로드 시간:</strong> {new Date().toLocaleString('ko-KR')}</p>
               </div>
 
               <div style={{ marginTop: '1.5rem' }}>
                 <button
-                  onClick={() => navigate('/work-orders')}
+                  onClick={() => navigate('/')}
                   className="btn btn-primary"
                   style={{ width: '100%' }}
                 >
-                  전체 목록 보기
+                  홈으로 이동하여 수정하기
                 </button>
               </div>
             </div>

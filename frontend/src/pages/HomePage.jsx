@@ -457,11 +457,11 @@ const HomePage = () => {
           font-size: 18px;
         }
         
-        /* ===== 작업지시서 그리드 (1920×1080: 4-5개씩 표시) ===== */
+        /* ===== 작업지시서 그리드 (1920×1080: 3-4개씩 표시, 큰 카드) ===== */
         .work-order-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 28px;
+          grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+          gap: 32px;
           padding-bottom: 24px;
         }
         
@@ -741,11 +741,11 @@ const HomePage = () => {
           font-size: 15px;
         }
         
-        /* ===== 1920×1080 최적화 ===== */
+        /* ===== 1920×1080 최적화 (큰 카드, 3열) ===== */
         @media (min-width: 1920px) {
           .work-order-grid {
-            grid-template-columns: repeat(5, 1fr);
-            gap: 32px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
           }
           
           .dashboard-main {
