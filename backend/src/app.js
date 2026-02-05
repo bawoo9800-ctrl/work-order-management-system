@@ -127,7 +127,8 @@ app.use(requestLogger);
  * 정적 파일 제공 (이미지 업로드)
  * ========================================
  */
-const uploadsPath = path.join(__dirname, '../uploads');
+// NAS 환경: /volume1/work_orders 직접 사용
+const uploadsPath = process.env.NAS_STORAGE_PATH || path.join(__dirname, '../uploads');
 app.use('/uploads', express.static(uploadsPath));
 logger.info(`📁 정적 파일 제공: /uploads -> ${uploadsPath}`);
 
