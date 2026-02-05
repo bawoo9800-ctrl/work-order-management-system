@@ -253,31 +253,35 @@ function UploadPage() {
 
         .form-label {
           display: block;
-          font-size: 14px;
-          font-weight: 600;
-          color: rgba(255, 255, 255, 0.7);
-          margin-bottom: 8px;
+          font-size: 15px;
+          font-weight: 700;
+          color: rgba(255, 255, 255, 0.9);
+          margin-bottom: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .form-input-mobile {
           width: 100%;
           padding: 16px;
-          font-size: 16px;
-          background: rgba(255, 255, 255, 0.1);
+          font-size: 18px;
+          background: rgba(255, 255, 255, 0.15);
           color: #fff;
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          border: 2px solid rgba(255, 255, 255, 0.3);
           border-radius: 12px;
           outline: none;
           transition: all 0.2s;
+          font-weight: 500;
         }
 
         .form-input-mobile:focus {
-          background: rgba(255, 255, 255, 0.15);
-          border-color: rgba(255, 255, 255, 0.4);
+          background: rgba(255, 255, 255, 0.2);
+          border-color: rgba(255, 255, 255, 0.5);
         }
 
         .form-input-mobile::placeholder {
-          color: rgba(255, 255, 255, 0.4);
+          color: rgba(255, 255, 255, 0.5);
+          font-weight: 400;
         }
 
         .form-input-mobile:disabled {
