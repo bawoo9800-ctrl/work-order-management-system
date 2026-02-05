@@ -284,9 +284,10 @@ export const processAndSaveImage = async (buffer, originalFilename, clientId = n
     const thumbnailPath = await saveImage(thumbnailBuffer, dirPath, thumbnailFilename);
     const ocrPath = await saveImage(ocrBuffer, dirPath, ocrFilename);
     
-    // 8) 상대 경로 생성 (uploads/ 이후 경로만)
-    const uploadsPath = process.env.UPLOADS_PATH || 'uploads';
-    const relativePath = mainPath.split(uploadsPath + path.sep)[1] || mainPath;
+    // 8) 상대 경로 생성 (NAS 전체 경로에서 날짜 기반 경로만 추출)
+    // 예: /volume1/work_orders/unclassified/2026/02/abc.jpg -> unclassified/2026/02/abc.jpg
+    const basePath = process.env.NAS_STORAGE_PATH || '/volume1/work_orders';
+    const relativePath = mainPath.replace(basePath + path.sep, '').replace(/\\/g, '/');
     
     const processingTime = Date.now() - startTime;
     
@@ -294,6 +295,7 @@ export const processAndSaveImage = async (buffer, originalFilename, clientId = n
       uuid,
       originalFilename,
       clientId,
+      mainPath,
       relativePath,
       processingTime: `${processingTime}ms`,
     });
