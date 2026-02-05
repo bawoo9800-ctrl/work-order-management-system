@@ -237,19 +237,32 @@ export const updateWorkOrder = asyncHandler(async (req, res) => {
 export const deleteWorkOrder = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const affectedRows = await WorkOrderModel.deleteWorkOrder(parseInt(id));
+  logger.info('작업지시서 삭제 요청', { id });
 
-  if (affectedRows === 0) {
-    throw new AppError('작업지시서를 찾을 수 없습니다.', 404);
+  try {
+    const affectedRows = await WorkOrderModel.deleteWorkOrder(parseInt(id));
+
+    if (affectedRows === 0) {
+      throw new AppError('작업지시서를 찾을 수 없습니다.', 404);
+    }
+
+    logger.info('작업지시서 삭제 완료', { id, affectedRows });
+
+    res.json({
+      success: true,
+      data: {
+        message: '작업지시서가 삭제되었습니다.',
+      },
+      error: null,
+    });
+  } catch (error) {
+    logger.error('작업지시서 삭제 실패', { 
+      id, 
+      error: error.message,
+      stack: error.stack 
+    });
+    throw error;
   }
-
-  res.json({
-    success: true,
-    data: {
-      message: '작업지시서가 삭제되었습니다.',
-    },
-    error: null,
-  });
 });
 
 /**
