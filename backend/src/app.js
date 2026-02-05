@@ -17,6 +17,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import routes from './routes/index.js';
 import { requestLogger } from './middleware/logging.middleware.js';
 import {
@@ -24,6 +26,10 @@ import {
   notFoundHandler,
 } from './middleware/error.middleware.js';
 import logger from './utils/logger.js';
+
+// ES 모듈에서 __dirname 사용하기 위한 설정
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Express 앱 생성
@@ -115,6 +121,15 @@ app.use(compression());
  * ========================================
  */
 app.use(requestLogger);
+
+/**
+ * ========================================
+ * 정적 파일 제공 (이미지 업로드)
+ * ========================================
+ */
+const uploadsPath = path.join(__dirname, '../uploads');
+app.use('/uploads', express.static(uploadsPath));
+logger.info(`📁 정적 파일 제공: /uploads -> ${uploadsPath}`);
 
 /**
  * ========================================
