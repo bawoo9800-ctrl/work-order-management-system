@@ -171,6 +171,53 @@ const HomePage = () => {
   
   return (
     <div className="dashboard-container">
+      {/* 좌측 사이드바 - 거래처 리스트 */}
+      <aside className="sidebar">
+        <div className="sidebar-header">
+          <h2>거래처 목록</h2>
+        </div>
+        
+        {/* 검색 필드 */}
+        <div className="search-box">
+          <input
+            type="text"
+            placeholder="거래처 검색..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="search-input"
+          />
+        </div>
+        
+        {/* 전체 보기 버튼 */}
+        <div 
+          className={`client-item ${!selectedClient ? 'active' : ''}`}
+          onClick={() => handleClientClick(null)}
+        >
+          <span className="client-name">전체 보기</span>
+          <span className="client-count">{workOrders.length}</span>
+        </div>
+        
+        {/* 거래처 목록 */}
+        <div className="client-list">
+          {filteredClients.length === 0 ? (
+            <div className="empty-list">
+              <p>검색 결과가 없습니다.</p>
+            </div>
+          ) : (
+            filteredClients.map((client) => (
+              <div
+                key={client.id}
+                className={`client-item ${selectedClient?.id === client.id ? 'active' : ''}`}
+                onClick={() => handleClientClick(client)}
+              >
+                <span className="client-name">{client.name}</span>
+                <span className="client-badge">●</span>
+              </div>
+            ))
+          )}
+        </div>
+      </aside>
+
       {/* 메인 컨텐츠 */}
       <main className="dashboard-main">
         <div className="dashboard-header">
@@ -324,10 +371,121 @@ const HomePage = () => {
           background: #f8f8f8;
           padding: 0;
           margin: -2rem -20px 0 -20px;
+          display: flex;
+        }
+        
+        /* ===== 좌측 사이드바 ===== */
+        .sidebar {
+          width: 280px;
+          background: #ffffff;
+          border-right: 1px solid #ddd;
+          display: flex;
+          flex-direction: column;
+          overflow-y: auto;
+          flex-shrink: 0;
+        }
+        
+        .sidebar-header {
+          padding: 24px 20px;
+          border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .sidebar-header h2 {
+          font-size: 18px;
+          font-weight: 700;
+          color: #000;
+          margin: 0;
+        }
+        
+        .search-box {
+          padding: 16px 20px;
+          border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .search-input {
+          width: 100%;
+          padding: 10px 12px;
+          border: 1px solid #ddd;
+          border-radius: 8px;
+          font-size: 14px;
+          outline: none;
+          transition: all 0.2s;
+        }
+        
+        .search-input:focus {
+          border-color: #000;
+          box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+        }
+        
+        .client-list {
+          flex: 1;
+          overflow-y: auto;
+          padding: 8px 0;
+        }
+        
+        .client-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 20px;
+          cursor: pointer;
+          transition: all 0.2s;
+          border-left: 3px solid transparent;
+        }
+        
+        .client-item:hover {
+          background: #f5f5f5;
+        }
+        
+        .client-item.active {
+          background: #f0f0f0;
+          border-left-color: #000;
+        }
+        
+        .client-name {
+          font-size: 14px;
+          font-weight: 500;
+          color: #333;
+          flex: 1;
+        }
+        
+        .client-item.active .client-name {
+          font-weight: 700;
+          color: #000;
+        }
+        
+        .client-count {
+          font-size: 13px;
+          font-weight: 600;
+          color: #666;
+          background: #f0f0f0;
+          padding: 2px 8px;
+          border-radius: 10px;
+        }
+        
+        .client-badge {
+          font-size: 10px;
+          color: #999;
+        }
+        
+        .client-item.active .client-badge {
+          color: #000;
+        }
+        
+        .empty-list {
+          padding: 40px 20px;
+          text-align: center;
+        }
+        
+        .empty-list p {
+          font-size: 14px;
+          color: #999;
+          margin: 0;
         }
         
         /* ===== 메인 컨텐츠 ===== */
         .dashboard-main {
+          flex: 1;
           max-width: 100%;
           padding: 40px 60px;
           background: #f8f8f8;
