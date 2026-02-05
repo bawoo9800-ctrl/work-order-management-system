@@ -1,35 +1,25 @@
-import { useState, useCallback } from 'react';
-import { useDropzone } from 'react-dropzone';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { workOrderAPI } from '../services/api';
 
 function UploadPage() {
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   
-  // 전송자 필드만 유지 (localStorage에서 이전 값 불러오기)
+  // 전송자 필드 (localStorage에서 이전 값 불러오기)
   const [uploadedBy, setUploadedBy] = useState(() => {
     return localStorage.getItem('lastUploadedBy') || '';
   });
 
-  // 전송자 변경 시 localStorage에 저장
-  const handleUploadedByChange = (e) => {
-    const value = e.target.value;
-    setUploadedBy(value);
-    if (value.trim()) {
-      localStorage.setItem('lastUploadedBy', value.trim());
-    }
-  };
-
-  const onDrop = useCallback((acceptedFiles) => {
-    if (acceptedFiles.length > 0) {
-      const selectedFile = acceptedFiles[0];
+  // 파일 선택 처리
+  const handleFileSelect = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
       setFile(selectedFile);
-      setResult(null);
       setError(null);
 
       // 이미지 미리보기
@@ -39,22 +29,17 @@ function UploadPage() {
       };
       reader.readAsDataURL(selectedFile);
     }
-  }, []);
+  };
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'image/jpeg': ['.jpg', '.jpeg'],
-      'image/png': ['.png'],
-      'image/webp': ['.webp'],
-    },
-    maxFiles: 1,
-    maxSize: 10 * 1024 * 1024, // 10MB
-  });
+  // 카메라 촬영 버튼 클릭
+  const handleCameraClick = () => {
+    fileInputRef.current?.click();
+  };
 
+  // 업로드 처리
   const handleUpload = async () => {
     if (!file) {
-      setError('파일을 선택해주세요.');
+      setError('사진을 촬영해주세요.');
       return;
     }
 
@@ -67,186 +52,334 @@ function UploadPage() {
       setUploading(true);
       setError(null);
       
-      // FormData 생성 (거래처/현장명 제거)
+      // 전송자명 저장
+      localStorage.setItem('lastUploadedBy', uploadedBy.trim());
+      
+      // FormData 생성
       const formData = new FormData();
       formData.append('image', file);
       formData.append('uploadedBy', uploadedBy);
       
-      const response = await workOrderAPI.upload(formData);
+      await workOrderAPI.upload(formData);
       
-      setResult(response.data);
-      setError(null);
+      // 업로드 성공 후 홈으로 이동
+      navigate('/', { replace: true });
     } catch (err) {
       console.error('Upload failed:', err);
       setError(err.response?.data?.error?.message || '업로드에 실패했습니다.');
-      setResult(null);
     } finally {
       setUploading(false);
     }
   };
 
-  const handleReset = () => {
+  // 다시 촬영
+  const handleRetake = () => {
     setFile(null);
     setPreview(null);
-    setResult(null);
     setError(null);
-    setUploadedBy('');
   };
 
   return (
-    <div className="upload-page">
-      <h1>📤 작업지시서 업로드</h1>
-      <p className="text-muted">작업지시서 이미지를 업로드하세요. 거래처/현장명은 홈 화면에서 수정할 수 있습니다.</p>
+    <div className="mobile-upload-page">
+      {/* 숨겨진 파일 입력 (카메라 직접 접근) */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileSelect}
+        style={{ display: 'none' }}
+      />
 
-      <div className="grid grid-2" style={{ marginTop: '2rem' }}>
-        {/* 업로드 영역 */}
-        <div>
-          <div className="card">
-            <h2 className="card-title">1. 이미지 선택</h2>
-            
-            <div
-              {...getRootProps()}
-              style={{
-                border: '2px dashed var(--border-color)',
-                borderRadius: '0.5rem',
-                padding: '3rem',
-                textAlign: 'center',
-                cursor: 'pointer',
-                background: isDragActive ? 'var(--background)' : 'transparent',
-                transition: 'all 0.2s',
-              }}
+      {!preview ? (
+        /* 촬영 화면 */
+        <div className="camera-screen">
+          <div className="camera-placeholder">
+            <div className="camera-icon">📷</div>
+            <p className="camera-text">작업지시서 촬영</p>
+          </div>
+          
+          <div className="camera-controls">
+            <button
+              onClick={handleCameraClick}
+              className="camera-button"
+              disabled={uploading}
             >
-              <input {...getInputProps()} />
-              {isDragActive ? (
-                <p style={{ color: 'var(--primary-color)' }}>📥 여기에 놓으세요...</p>
-              ) : (
-                <>
-                  <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>📁</p>
-                  <p>이미지를 드래그하거나 클릭하여 선택</p>
-                  <p className="text-muted text-sm" style={{ marginTop: '0.5rem' }}>
-                    JPG, PNG, WebP (최대 10MB)
-                  </p>
-                </>
-              )}
-            </div>
-
-            {file && (
-              <div style={{ marginTop: '1rem' }}>
-                <p className="text-sm">
-                  <strong>선택된 파일:</strong> {file.name}
-                </p>
-                <p className="text-sm text-muted">
-                  크기: {(file.size / 1024).toFixed(1)} KB
-                </p>
-              </div>
-            )}
+              📸 사진 촬영
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* 미리보기 및 전송 화면 */
+        <div className="preview-screen">
+          {/* 미리보기 이미지 */}
+          <div className="preview-image-container">
+            <img src={preview} alt="Preview" className="preview-image" />
           </div>
 
-          <div className="card" style={{ marginTop: '1.5rem' }}>
-            <h2 className="card-title">2. 전송자 입력</h2>
-            
-            <div className="form-group">
-              <label className="form-label">전송자 *</label>
+          {/* 전송자 입력 */}
+          <div className="upload-form">
+            <div className="form-field">
+              <label className="form-label">전송자</label>
               <input
                 type="text"
                 value={uploadedBy}
-                onChange={handleUploadedByChange}
-                className="form-input"
-                placeholder="예: 홍길동"
-                required
+                onChange={(e) => setUploadedBy(e.target.value)}
+                className="form-input-mobile"
+                placeholder="이름을 입력하세요"
+                disabled={uploading}
               />
-              {uploadedBy && (
-                <p className="text-sm text-muted" style={{ marginTop: '0.5rem' }}>
-                  💾 다음에도 자동으로 입력됩니다.
-                </p>
-              )}
             </div>
 
-            <p className="text-sm text-muted" style={{ marginTop: '0.5rem' }}>
-              * 필수 입력 항목
-            </p>
-            <p className="text-sm text-muted" style={{ marginTop: '0.25rem' }}>
-              💡 거래처/현장명은 홈 화면 카드에서 수정할 수 있습니다.
-            </p>
-          </div>
-
-          <div style={{ marginTop: '1.5rem' }}>
-            <button
-              onClick={handleUpload}
-              disabled={!file || uploading || !uploadedBy.trim()}
-              className="btn btn-primary"
-              style={{ width: '100%' }}
-            >
-              {uploading ? '업로드 중...' : '📤 업로드'}
-            </button>
-            {file && !uploading && (
-              <button
-                onClick={handleReset}
-                className="btn btn-secondary"
-                style={{ width: '100%', marginTop: '0.5rem' }}
-              >
-                다시 선택
-              </button>
+            {/* 에러 메시지 */}
+            {error && (
+              <div className="error-message">
+                ⚠️ {error}
+              </div>
             )}
+
+            {/* 버튼 그룹 */}
+            <div className="button-group">
+              <button
+                onClick={handleRetake}
+                className="btn-retake"
+                disabled={uploading}
+              >
+                다시 촬영
+              </button>
+              <button
+                onClick={handleUpload}
+                className="btn-upload"
+                disabled={uploading || !uploadedBy.trim()}
+              >
+                {uploading ? '전송 중...' : '📤 전송'}
+              </button>
+            </div>
           </div>
         </div>
+      )}
 
-        {/* 미리보기 및 결과 */}
-        <div>
-          {preview && (
-            <div className="card">
-              <h2 className="card-title">미리보기</h2>
-              <img
-                src={preview}
-                alt="Preview"
-                style={{
-                  width: '100%',
-                  height: 'auto',
-                  borderRadius: '0.375rem',
-                  border: '1px solid var(--border-color)',
-                }}
-              />
-            </div>
-          )}
+      <style>{`
+        * {
+          box-sizing: border-box;
+        }
 
-          {uploading && (
-            <div className="card" style={{ marginTop: '1.5rem' }}>
-              <div className="loading">
-                <div className="spinner"></div>
-                <p>업로드 중...</p>
-              </div>
-            </div>
-          )}
+        .mobile-upload-page {
+          min-height: 100vh;
+          background: #000;
+          color: #fff;
+          display: flex;
+          flex-direction: column;
+          padding: 0;
+          margin: -2rem -20px 0 -20px;
+        }
 
-          {error && (
-            <div className="alert alert-error" style={{ marginTop: '1.5rem' }}>
-              <strong>오류:</strong> {error}
-            </div>
-          )}
+        /* ===== 촬영 화면 ===== */
+        .camera-screen {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          padding: 20px;
+        }
 
-          {result && (
-            <div className="card" style={{ marginTop: '1.5rem' }}>
-              <h2 className="card-title">✅ 업로드 완료</h2>
-              
-              <div style={{ marginTop: '1rem' }}>
-                <p><strong>파일명:</strong> {result.originalFilename}</p>
-                <p><strong>전송자:</strong> {result.uploadedBy}</p>
-                <p><strong>업로드 시간:</strong> {new Date().toLocaleString('ko-KR')}</p>
-              </div>
+        .camera-placeholder {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          width: 100%;
+          max-width: 500px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 2px dashed rgba(255, 255, 255, 0.3);
+          border-radius: 16px;
+          padding: 40px;
+        }
 
-              <div style={{ marginTop: '1.5rem' }}>
-                <button
-                  onClick={() => navigate('/')}
-                  className="btn btn-primary"
-                  style={{ width: '100%' }}
-                >
-                  홈으로 이동하여 수정하기
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+        .camera-icon {
+          font-size: 80px;
+          margin-bottom: 20px;
+        }
+
+        .camera-text {
+          font-size: 20px;
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.8);
+          margin: 0;
+        }
+
+        .camera-controls {
+          width: 100%;
+          max-width: 500px;
+          padding: 20px 0;
+        }
+
+        .camera-button {
+          width: 100%;
+          padding: 20px;
+          font-size: 20px;
+          font-weight: 600;
+          background: #fff;
+          color: #000;
+          border: none;
+          border-radius: 50px;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 4px 20px rgba(255, 255, 255, 0.3);
+        }
+
+        .camera-button:active {
+          transform: scale(0.95);
+        }
+
+        .camera-button:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        /* ===== 미리보기 화면 ===== */
+        .preview-screen {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
+        .preview-image-container {
+          flex: 1;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          background: #000;
+          overflow: hidden;
+          min-height: 0;
+        }
+
+        .preview-image {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+
+        /* ===== 업로드 폼 ===== */
+        .upload-form {
+          background: #1a1a1a;
+          padding: 24px;
+          border-radius: 20px 20px 0 0;
+          box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .form-field {
+          margin-bottom: 20px;
+        }
+
+        .form-label {
+          display: block;
+          font-size: 14px;
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.7);
+          margin-bottom: 8px;
+        }
+
+        .form-input-mobile {
+          width: 100%;
+          padding: 16px;
+          font-size: 16px;
+          background: rgba(255, 255, 255, 0.1);
+          color: #fff;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 12px;
+          outline: none;
+          transition: all 0.2s;
+        }
+
+        .form-input-mobile:focus {
+          background: rgba(255, 255, 255, 0.15);
+          border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .form-input-mobile::placeholder {
+          color: rgba(255, 255, 255, 0.4);
+        }
+
+        .form-input-mobile:disabled {
+          opacity: 0.5;
+        }
+
+        /* ===== 에러 메시지 ===== */
+        .error-message {
+          padding: 12px 16px;
+          background: rgba(255, 59, 48, 0.2);
+          border: 1px solid rgba(255, 59, 48, 0.4);
+          border-radius: 8px;
+          color: #ff3b30;
+          font-size: 14px;
+          margin-bottom: 16px;
+        }
+
+        /* ===== 버튼 그룹 ===== */
+        .button-group {
+          display: flex;
+          gap: 12px;
+        }
+
+        .btn-retake,
+        .btn-upload {
+          flex: 1;
+          padding: 16px;
+          font-size: 16px;
+          font-weight: 600;
+          border: none;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .btn-retake {
+          background: rgba(255, 255, 255, 0.1);
+          color: #fff;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-retake:active {
+          background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-upload {
+          background: #fff;
+          color: #000;
+          box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-upload:active {
+          transform: scale(0.95);
+        }
+
+        .btn-retake:disabled,
+        .btn-upload:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          transform: none;
+        }
+
+        /* ===== 반응형 ===== */
+        @media (max-width: 768px) {
+          .mobile-upload-page {
+            margin: 0;
+          }
+        }
+
+        @media (min-width: 769px) {
+          .mobile-upload-page {
+            max-width: 500px;
+            margin: 0 auto;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+          }
+        }
+      `}</style>
     </div>
   );
 }
