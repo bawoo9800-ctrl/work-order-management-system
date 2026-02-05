@@ -286,7 +286,7 @@ export const processAndSaveImage = async (buffer, originalFilename, clientId = n
     
     // 8) 상대 경로 생성 (NAS 전체 경로에서 날짜 기반 경로만 추출)
     // 예: /volume1/work_orders/unclassified/2026/02/abc.jpg -> unclassified/2026/02/abc.jpg
-    const basePath = process.env.NAS_STORAGE_PATH || '/volume1/work_orders';
+    // basePath는 위에서 이미 선언됨 (272번째 줄)
     const relativePath = mainPath.replace(basePath + path.sep, '').replace(/\\/g, '/');
     
     const processingTime = Date.now() - startTime;
