@@ -299,8 +299,8 @@ const HomePage = () => {
         /* ===== 작업지시서 그리드 (1920×1080 최적화) ===== */
         .work-order-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-          gap: 20px;
+          grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+          gap: 30px;
           padding-bottom: 40px;
         }
         
@@ -361,27 +361,27 @@ const HomePage = () => {
         }
         
         .card-info {
-          padding: 16px;
+          padding: 20px;
         }
         
         .info-row {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 10px;
-          gap: 12px;
+          margin-bottom: 12px;
+          gap: 16px;
         }
         
         .info-label {
           color: #666;
-          font-size: 13px;
+          font-size: 15px;
           font-weight: 500;
           flex-shrink: 0;
         }
         
         .info-value {
           color: #000;
-          font-size: 14px;
+          font-size: 16px;
           font-weight: 600;
           text-align: right;
           word-break: break-all;
@@ -389,11 +389,11 @@ const HomePage = () => {
         
         .edit-input {
           width: 100%;
-          padding: 8px 10px;
+          padding: 10px 12px;
           border: 1px solid #ccc;
           border-radius: 4px;
-          font-size: 13px;
-          margin-bottom: 8px;
+          font-size: 15px;
+          margin-bottom: 10px;
           font-weight: 500;
         }
         
@@ -404,18 +404,18 @@ const HomePage = () => {
         
         .card-actions {
           display: flex;
-          gap: 6px;
-          margin-top: 14px;
-          padding-top: 14px;
+          gap: 8px;
+          margin-top: 16px;
+          padding-top: 16px;
           border-top: 1px solid #f0f0f0;
         }
         
         .btn-edit, .btn-save, .btn-cancel {
           flex: 1;
-          padding: 8px 12px;
+          padding: 10px 16px;
           border: 1px solid #ddd;
           border-radius: 4px;
-          font-size: 18px;
+          font-size: 20px;
           font-weight: 400;
           cursor: pointer;
           transition: all 0.2s;
@@ -561,8 +561,8 @@ const HomePage = () => {
         /* ===== 1920×1080 최적화 ===== */
         @media (min-width: 1920px) {
           .work-order-grid {
-            grid-template-columns: repeat(6, 1fr);
-            gap: 24px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 36px;
           }
           
           .dashboard-main {
@@ -576,14 +576,15 @@ const HomePage = () => {
         
         @media (min-width: 1440px) and (max-width: 1919px) {
           .work-order-grid {
-            grid-template-columns: repeat(5, 1fr);
-            gap: 20px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
           }
         }
         
         @media (min-width: 1200px) and (max-width: 1439px) {
           .work-order-grid {
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
           }
         }
         
