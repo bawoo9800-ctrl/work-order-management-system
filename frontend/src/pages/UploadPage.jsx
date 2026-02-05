@@ -94,20 +94,14 @@ function UploadPage() {
       {!preview ? (
         /* 촬영 화면 */
         <div className="camera-screen">
-          <div className="camera-placeholder">
-            <div className="camera-icon">📷</div>
-            <p className="camera-text">작업지시서 촬영</p>
-          </div>
-          
-          <div className="camera-controls">
-            <button
-              onClick={handleCameraClick}
-              className="camera-button"
-              disabled={uploading}
-            >
-              📸 사진 촬영
-            </button>
-          </div>
+          <button
+            onClick={handleCameraClick}
+            className="camera-button-center"
+            disabled={uploading}
+          >
+            <div className="camera-icon-large">📷</div>
+            <div className="camera-text-center">사진 촬영</div>
+          </button>
         </div>
       ) : (
         /* 미리보기 및 전송 화면 */
@@ -178,65 +172,47 @@ function UploadPage() {
         .camera-screen {
           flex: 1;
           display: flex;
-          flex-direction: column;
           justify-content: center;
           align-items: center;
-          padding: 20px;
+          padding: 0;
+          margin: 0;
         }
 
-        .camera-placeholder {
-          flex: 1;
+        .camera-button-center {
+          width: 200px;
+          height: 200px;
           display: flex;
           flex-direction: column;
           justify-content: center;
           align-items: center;
-          width: 100%;
-          max-width: 500px;
-          background: rgba(255, 255, 255, 0.05);
-          border: 2px dashed rgba(255, 255, 255, 0.3);
-          border-radius: 16px;
-          padding: 40px;
-        }
-
-        .camera-icon {
-          font-size: 80px;
-          margin-bottom: 20px;
-        }
-
-        .camera-text {
-          font-size: 20px;
-          font-weight: 600;
-          color: rgba(255, 255, 255, 0.8);
-          margin: 0;
-        }
-
-        .camera-controls {
-          width: 100%;
-          max-width: 500px;
-          padding: 20px 0;
-        }
-
-        .camera-button {
-          width: 100%;
-          padding: 20px;
-          font-size: 20px;
-          font-weight: 600;
-          background: #fff;
-          color: #000;
-          border: none;
-          border-radius: 50px;
+          background: rgba(255, 255, 255, 0.1);
+          border: 3px solid rgba(255, 255, 255, 0.3);
+          border-radius: 50%;
           cursor: pointer;
-          transition: all 0.2s;
-          box-shadow: 0 4px 20px rgba(255, 255, 255, 0.3);
+          transition: all 0.3s;
+          backdrop-filter: blur(10px);
         }
 
-        .camera-button:active {
-          transform: scale(0.95);
+        .camera-button-center:active {
+          transform: scale(0.9);
+          background: rgba(255, 255, 255, 0.15);
         }
 
-        .camera-button:disabled {
+        .camera-button-center:disabled {
           opacity: 0.5;
           cursor: not-allowed;
+        }
+
+        .camera-icon-large {
+          font-size: 64px;
+          margin-bottom: 8px;
+        }
+
+        .camera-text-center {
+          font-size: 16px;
+          font-weight: 600;
+          color: #fff;
+          text-align: center;
         }
 
         /* ===== 미리보기 화면 ===== */

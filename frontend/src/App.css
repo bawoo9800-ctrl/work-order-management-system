@@ -111,6 +111,14 @@ body {
   padding: 2rem 0;
 }
 
+/* Main Fullscreen (업로드 페이지용) */
+.app-main-fullscreen {
+  flex: 1;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
 /* Footer */
 .app-footer {
   background: var(--card-background);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import './App.css';
 
 // Pages
@@ -12,8 +12,10 @@ import ClientsPage from './pages/ClientsPage';
 // API
 import { healthAPI } from './services/api';
 
-function App() {
+function AppContent() {
+  const location = useLocation();
   const [healthStatus, setHealthStatus] = useState(null);
+  const isUploadPage = location.pathname === '/upload';
 
   useEffect(() => {
     checkHealth();
@@ -30,9 +32,9 @@ function App() {
   };
 
   return (
-    <Router>
-      <div className="app">
-        {/* Header */}
+    <div className="app">
+      {/* Header - 업로드 페이지에서는 숨김 */}
+      {!isUploadPage && (
         <header className="app-header">
           <div className="container">
             <h1 className="app-title">📋 작업지시서 관리 시스템</h1>
@@ -53,27 +55,37 @@ function App() {
             </div>
           </div>
         </header>
+      )}
 
-        {/* Main Content */}
-        <main className="app-main">
-          <div className="container">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/upload" element={<UploadPage />} />
-              <Route path="/work-orders" element={<WorkOrdersPage />} />
-              <Route path="/clients" element={<ClientsPage />} />
-              <Route path="/stats" element={<StatsPage />} />
-            </Routes>
-          </div>
-        </main>
+      {/* Main Content */}
+      <main className={isUploadPage ? "app-main-fullscreen" : "app-main"}>
+        <div className={isUploadPage ? "" : "container"}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/upload" element={<UploadPage />} />
+            <Route path="/work-orders" element={<WorkOrdersPage />} />
+            <Route path="/clients" element={<ClientsPage />} />
+            <Route path="/stats" element={<StatsPage />} />
+          </Routes>
+        </div>
+      </main>
 
-        {/* Footer */}
+      {/* Footer - 업로드 페이지에서는 숨김 */}
+      {!isUploadPage && (
         <footer className="app-footer">
           <div className="container">
             <p>&copy; 2026 작업지시서 관리 시스템 v1.0.0</p>
           </div>
         </footer>
-      </div>
+      )}
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }
