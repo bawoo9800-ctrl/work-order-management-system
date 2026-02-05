@@ -68,7 +68,7 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
       client_id: null, // 수동 입력이므로 null
       classification_method: 'manual',
       confidence_score: null,
-      reasoning: `수동 입력: ${clientName}`,
+      reasoning: clientName ? `수동 입력: ${clientName}` : '수동 업로드',
       ocr_text: null,
       work_date: null,
       work_type: null,
@@ -88,7 +88,7 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
         id: workOrderId,
         uuid: imageResult.uuid,
         originalFilename: imageResult.originalFilename,
-        clientName: clientName.trim(),
+        clientName: clientName?.trim() || null,
         siteName: siteName?.trim() || null,
         uploadedBy: uploadedBy.trim(),
         processingTimeMs: Date.now() - startTime,
