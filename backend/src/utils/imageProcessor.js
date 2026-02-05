@@ -284,19 +284,24 @@ export const processAndSaveImage = async (buffer, originalFilename, clientId = n
     const thumbnailPath = await saveImage(thumbnailBuffer, dirPath, thumbnailFilename);
     const ocrPath = await saveImage(ocrBuffer, dirPath, ocrFilename);
     
+    // 8) 상대 경로 생성 (uploads/ 이후 경로만)
+    const uploadsPath = process.env.UPLOADS_PATH || 'uploads';
+    const relativePath = mainPath.split(uploadsPath + path.sep)[1] || mainPath;
+    
     const processingTime = Date.now() - startTime;
     
     logger.info('이미지 처리 파이프라인 완료', {
       uuid,
       originalFilename,
       clientId,
+      relativePath,
       processingTime: `${processingTime}ms`,
     });
     
     return {
       uuid,
       originalFilename,
-      storagePath: mainPath,
+      storagePath: relativePath, // 상대 경로로 변경
       thumbnailPath,
       ocrPath,
       fileSize: processedBuffer.length,

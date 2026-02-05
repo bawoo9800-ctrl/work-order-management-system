@@ -86,7 +86,15 @@ const HomePage = () => {
   // 이미지 URL 생성
   const getImageUrl = (workOrder) => {
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
-    return `${baseUrl}/uploads/${workOrder.storage_path}`;
+    const storagePath = workOrder.storage_path || '';
+    
+    // storage_path가 이미 /uploads/로 시작하면 그대로 사용
+    if (storagePath.startsWith('/uploads/')) {
+      return `${baseUrl}${storagePath}`;
+    }
+    
+    // 아니면 /uploads/ 추가
+    return `${baseUrl}/uploads/${storagePath}`;
   };
   
   // 시간 포맷팅
