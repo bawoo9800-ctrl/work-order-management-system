@@ -39,6 +39,11 @@ export const getAllWorkOrders = async (options = {}) => {
   const conditions = [];
   const params = [];
 
+  // 기본적으로 삭제된 항목 제외 (status가 명시적으로 지정되지 않은 경우)
+  if (!status) {
+    conditions.push("wo.status != 'deleted'");
+  }
+
   // 필터 조건 추가
   if (clientId) {
     conditions.push('wo.client_id = ?');
