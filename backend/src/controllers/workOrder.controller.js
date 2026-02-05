@@ -196,6 +196,8 @@ export const updateWorkOrder = asyncHandler(async (req, res) => {
   // 허용된 필드만 업데이트
   const allowedFields = [
     'client_id',
+    'client_name',
+    'site_name',
     'classification_method',
     'confidence_score',
     'reasoning',

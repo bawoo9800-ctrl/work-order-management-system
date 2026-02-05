@@ -236,6 +236,8 @@ export const createWorkOrder = async (workOrderData) => {
 export const updateWorkOrder = async (id, updateData) => {
   const allowedFields = [
     'client_id',
+    'client_name',
+    'site_name',
     'classification_method',
     'confidence_score',
     'reasoning',
