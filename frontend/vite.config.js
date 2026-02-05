@@ -14,12 +14,7 @@ export default defineConfig({
       '192.168.0.109',
       '127.0.0.1'
     ],
-    hmr: {
-      protocol: 'ws',
-      host: 'wo.doorlife.synology.me',
-      port: 5173,
-      clientPort: 80,
-    },
+    hmr: false, // HMR 완전 비활성화 (WebSocket 에러 제거)
     proxy: {
       '/api': {
         target: 'http://localhost:3200',
