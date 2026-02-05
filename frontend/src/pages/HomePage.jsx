@@ -214,6 +214,13 @@ const HomePage = () => {
                   />
                   {/* 클릭 힌트 */}
                   <div className="click-hint">🔍 클릭하여 확대</div>
+                  
+                  {/* 거래처명 배지 (이미지 위 우측 하단) */}
+                  {!editingCard && order.client_name && (
+                    <div className="client-badge">
+                      {order.client_name}
+                    </div>
+                  )}
                 </div>
                 
                 {/* 정보 영역 */}
@@ -258,21 +265,17 @@ const HomePage = () => {
                     </>
                   ) : (
                     <>
-                      <div className="info-row">
-                        <span className="info-label">시간</span>
-                        <span className="info-value">{formatTime(order.created_at)}</span>
+                      {/* 시간 + 전송자 (한 줄, 작은 폰트) */}
+                      <div className="meta-row">
+                        <span className="meta-text">{formatTime(order.created_at)}</span>
+                        <span className="meta-divider">•</span>
+                        <span className="meta-text">{order.uploaded_by || '전송자 미상'}</span>
                       </div>
-                      <div className="info-row">
-                        <span className="info-label">거래처명</span>
-                        <span className="info-value">{order.client_name || '미분류'}</span>
-                      </div>
+                      
+                      {/* 현장명 */}
                       <div className="info-row">
                         <span className="info-label">현장명</span>
                         <span className="info-value">{order.site_name || '-'}</span>
-                      </div>
-                      <div className="info-row">
-                        <span className="info-label">전송자</span>
-                        <span className="info-value">{order.uploaded_by || '-'}</span>
                       </div>
                     </>
                   )}
@@ -413,8 +416,45 @@ const HomePage = () => {
           opacity: 1;
         }
         
+        /* ===== 거래처명 배지 (이미지 위 우측 하단) ===== */
+        .client-badge {
+          position: absolute;
+          bottom: 12px;
+          right: 12px;
+          background: rgba(0, 0, 0, 0.85);
+          color: #ffffff;
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-size: 14px;
+          font-weight: 600;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          backdrop-filter: blur(4px);
+          z-index: 10;
+        }
+        
         .card-info {
           padding: 20px;
+        }
+        
+        /* ===== 메타 정보 (시간 + 전송자) ===== */
+        .meta-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 16px;
+          padding-bottom: 12px;
+          border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .meta-text {
+          color: #666;
+          font-size: 13px;
+          font-weight: 400;
+        }
+        
+        .meta-divider {
+          color: #ccc;
+          font-size: 12px;
         }
         
         .info-row {
