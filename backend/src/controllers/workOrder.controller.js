@@ -38,11 +38,7 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
   // 수동 입력 필드
   const { clientName, siteName, uploadedBy } = req.body;
   
-  // 필수 필드 검증
-  if (!clientName || !clientName.trim()) {
-    throw new AppError('거래처명은 필수입니다.', 400);
-  }
-  
+  // 필수 필드 검증 (전송자만)
   if (!uploadedBy || !uploadedBy.trim()) {
     throw new AppError('전송자명은 필수입니다.', 400);
   }

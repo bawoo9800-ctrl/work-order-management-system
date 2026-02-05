@@ -11,8 +11,19 @@ function UploadPage() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   
-  // 전송자 필드만 유지
-  const [uploadedBy, setUploadedBy] = useState('');
+  // 전송자 필드만 유지 (localStorage에서 이전 값 불러오기)
+  const [uploadedBy, setUploadedBy] = useState(() => {
+    return localStorage.getItem('lastUploadedBy') || '';
+  });
+
+  // 전송자 변경 시 localStorage에 저장
+  const handleUploadedByChange = (e) => {
+    const value = e.target.value;
+    setUploadedBy(value);
+    if (value.trim()) {
+      localStorage.setItem('lastUploadedBy', value.trim());
+    }
+  };
 
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles.length > 0) {
@@ -139,11 +150,16 @@ function UploadPage() {
               <input
                 type="text"
                 value={uploadedBy}
-                onChange={(e) => setUploadedBy(e.target.value)}
+                onChange={handleUploadedByChange}
                 className="form-input"
                 placeholder="예: 홍길동"
                 required
               />
+              {uploadedBy && (
+                <p className="text-sm text-muted" style={{ marginTop: '0.5rem' }}>
+                  💾 다음에도 자동으로 입력됩니다.
+                </p>
+              )}
             </div>
 
             <p className="text-sm text-muted" style={{ marginTop: '0.5rem' }}>
