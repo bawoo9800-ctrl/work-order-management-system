@@ -21,6 +21,8 @@ const HomePage = () => {
   const [editingCard, setEditingCard] = useState(null);
   const [editForm, setEditForm] = useState({ client_name: '', site_name: '' });
   const [zoomedImage, setZoomedImage] = useState(null);
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const [filteredClientNames, setFilteredClientNames] = useState([]);
   
   // 오늘 날짜 (YYYY-MM-DD)
   const today = new Date().toISOString().split('T')[0];
@@ -93,6 +95,29 @@ const HomePage = () => {
       client_name: order.client_name || '',
       site_name: order.site_name || '',
     });
+    setShowAutocomplete(false);
+  };
+  
+  // 거래처명 입력 시 자동완성
+  const handleClientNameChange = (e) => {
+    const value = e.target.value;
+    setEditForm({ ...editForm, client_name: value });
+    
+    if (value.trim()) {
+      const filtered = clients
+        .filter(client => client.name && client.name.toLowerCase().includes(value.toLowerCase()))
+        .slice(0, 5); // 최대 5개만 표시
+      setFilteredClientNames(filtered);
+      setShowAutocomplete(filtered.length > 0);
+    } else {
+      setShowAutocomplete(false);
+    }
+  };
+  
+  // 자동완성 선택
+  const handleSelectClient = (clientName) => {
+    setEditForm({ ...editForm, client_name: clientName });
+    setShowAutocomplete(false);
   };
   
   const handleEditSave = async (orderId) => {
@@ -196,13 +221,33 @@ const HomePage = () => {
                   {/* 거래처명 / 현장명 */}
                   {editingCard === order.id ? (
                     <>
-                      <input
-                        type="text"
-                        className="edit-input"
-                        value={editForm.client_name}
-                        onChange={(e) => setEditForm({ ...editForm, client_name: e.target.value })}
-                        placeholder="거래처명"
-                      />
+                      <div className="autocomplete-wrapper">
+                        <input
+                          type="text"
+                          className="edit-input"
+                          value={editForm.client_name}
+                          onChange={handleClientNameChange}
+                          onFocus={() => {
+                            if (editForm.client_name.trim() && filteredClientNames.length > 0) {
+                              setShowAutocomplete(true);
+                            }
+                          }}
+                          placeholder="거래처명"
+                        />
+                        {showAutocomplete && editingCard === order.id && (
+                          <ul className="autocomplete-list">
+                            {filteredClientNames.map((client) => (
+                              <li
+                                key={client.id}
+                                onClick={() => handleSelectClient(client.name)}
+                                className="autocomplete-item"
+                              >
+                                {client.name}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
                       <input
                         type="text"
                         className="edit-input"
@@ -214,12 +259,20 @@ const HomePage = () => {
                   ) : (
                     <>
                       <div className="info-row">
+                        <span className="info-label">시간</span>
+                        <span className="info-value">{formatTime(order.created_at)}</span>
+                      </div>
+                      <div className="info-row">
                         <span className="info-label">거래처명</span>
                         <span className="info-value">{order.client_name || '미분류'}</span>
                       </div>
                       <div className="info-row">
                         <span className="info-label">현장명</span>
                         <span className="info-value">{order.site_name || '-'}</span>
+                      </div>
+                      <div className="info-row">
+                        <span className="info-label">전송자</span>
+                        <span className="info-value">{order.uploaded_by || '-'}</span>
                       </div>
                     </>
                   )}
@@ -400,6 +453,47 @@ const HomePage = () => {
         .edit-input:focus {
           outline: none;
           border-color: #000;
+        }
+        
+        /* ===== 자동완성 ===== */
+        .autocomplete-wrapper {
+          position: relative;
+          margin-bottom: 10px;
+        }
+        
+        .autocomplete-list {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          background: #ffffff;
+          border: 1px solid #ccc;
+          border-top: none;
+          border-radius: 0 0 4px 4px;
+          max-height: 200px;
+          overflow-y: auto;
+          z-index: 1000;
+          margin: 0;
+          padding: 0;
+          list-style: none;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .autocomplete-item {
+          padding: 10px 12px;
+          cursor: pointer;
+          font-size: 15px;
+          color: #333;
+          border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .autocomplete-item:last-child {
+          border-bottom: none;
+        }
+        
+        .autocomplete-item:hover {
+          background: #f5f5f5;
+          color: #000;
         }
         
         .card-actions {
