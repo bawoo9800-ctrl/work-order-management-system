@@ -4,9 +4,8 @@
  * ========================================
  * 파일: src/pages/HomePage.jsx
  * 설명: 당일 작업지시서 카드형 대시보드 + 좌측 거래처 리스트
- *       - 1920×1080 해상도 최적화
- *       - 마우스 오버 시 이미지 확대
- *       - 카드에서 거래처명/현장명 수정 기능
+ *       - 중고차 사이트 스타일 디자인
+ *       - 깔끔한 흰색 배경, 미니멀 카드
  * ========================================
  */
 
@@ -79,17 +78,15 @@ const HomePage = () => {
   // 거래처 선택
   const handleClientClick = (client) => {
     if (selectedClient?.id === client?.id) {
-      // 이미 선택된 거래처 클릭 시 전체 보기
       setSelectedClient(null);
       fetchTodayWorkOrders();
     } else {
-      // 새로운 거래처 선택
       setSelectedClient(client);
       fetchTodayWorkOrders(client?.id);
     }
   };
   
-  // 카드 수정 시작
+  // 카드 수정
   const handleEditStart = (order) => {
     setEditingCard(order.id);
     setEditForm({
@@ -98,18 +95,12 @@ const HomePage = () => {
     });
   };
   
-  // 카드 수정 저장
   const handleEditSave = async (orderId) => {
     try {
       await workOrderAPI.update(orderId, editForm);
-      
-      // 로컬 상태 업데이트
       setWorkOrders(workOrders.map(order => 
-        order.id === orderId 
-          ? { ...order, ...editForm }
-          : order
+        order.id === orderId ? { ...order, ...editForm } : order
       ));
-      
       setEditingCard(null);
       console.log('✅ 수정 완료:', editForm);
     } catch (error) {
@@ -118,7 +109,6 @@ const HomePage = () => {
     }
   };
   
-  // 카드 수정 취소
   const handleEditCancel = () => {
     setEditingCard(null);
     setEditForm({ client_name: '', site_name: '' });
@@ -129,7 +119,6 @@ const HomePage = () => {
     setZoomedImage(imageUrl);
   };
   
-  // 이미지 확대 닫기
   const closeImageZoom = () => {
     setZoomedImage(null);
   };
@@ -139,12 +128,10 @@ const HomePage = () => {
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
     const storagePath = workOrder.storage_path || '';
     
-    // storage_path가 이미 /uploads/로 시작하면 그대로 사용
     if (storagePath.startsWith('/uploads/')) {
       return `${baseUrl}${storagePath}`;
     }
     
-    // 아니면 /uploads/ 추가
     return `${baseUrl}/uploads/${storagePath}`;
   };
   
@@ -162,28 +149,29 @@ const HomePage = () => {
       {/* 좌측 거래처 리스트 */}
       <aside className="client-sidebar">
         <div className="sidebar-header">
-          <h2>📋 거래처 목록</h2>
-          <p className="client-count">{filteredClients.length}개</p>
+          <h2>거래처 목록</h2>
+          <span className="client-count">{filteredClients.length}개</span>
         </div>
         
         {/* 검색 필드 */}
         <div className="search-box">
           <input
             type="text"
-            placeholder="🔍 거래처 검색..."
+            placeholder="거래처 검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="client-search-input"
           />
         </div>
         
-        {/* 전체 보기 버튼 */}
-        <div 
-          className={`client-item ${!selectedClient ? 'active' : ''}`}
-          onClick={() => handleClientClick(null)}
-          style={{ borderBottom: '2px solid #e0e0e0', marginBottom: '10px', paddingBottom: '10px' }}
-        >
-          <strong>📊 전체 보기</strong>
+        {/* 전체 보기 */}
+        <div className="filter-section">
+          <div 
+            className={`client-item ${!selectedClient ? 'active' : ''}`}
+            onClick={() => handleClientClick(null)}
+          >
+            전체 보기
+          </div>
         </div>
         
         {/* 거래처 목록 */}
@@ -207,14 +195,16 @@ const HomePage = () => {
       {/* 메인 컨텐츠 */}
       <main className="dashboard-main">
         <div className="dashboard-header">
-          <h1>📅 {new Date().toLocaleDateString('ko-KR', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric',
-            weekday: 'long'
-          })} 작업지시서</h1>
+          <div>
+            <h1>{new Date().toLocaleDateString('ko-KR', { 
+              month: 'long', 
+              day: 'numeric',
+              weekday: 'long'
+            })} 작업지시서</h1>
+            <p className="subtitle">총 {workOrders.length}건</p>
+          </div>
           {selectedClient && (
-            <div className="selected-client-badge">
+            <div className="selected-badge">
               {selectedClient.name}
             </div>
           )}
@@ -235,6 +225,11 @@ const HomePage = () => {
           <div className="work-order-grid">
             {workOrders.map((order) => (
               <div key={order.id} className="work-order-card">
+                {/* NEW 배지 (최근 1시간 이내) */}
+                {new Date() - new Date(order.created_at) < 3600000 && (
+                  <div className="new-badge">NEW</div>
+                )}
+                
                 {/* 이미지 */}
                 <div 
                   className="card-image"
@@ -244,79 +239,62 @@ const HomePage = () => {
                     src={getImageUrl(order)} 
                     alt={order.original_filename}
                     onError={(e) => {
-                      e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="280"><rect width="200" height="280" fill="%23f0f0f0"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23999" font-size="14">이미지 없음</text></svg>';
+                      e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="280"><rect width="200" height="280" fill="%23f5f5f5"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23999" font-size="14">이미지 없음</text></svg>';
                     }}
                   />
-                  <div className="zoom-hint">🔍 클릭하여 확대</div>
                 </div>
                 
                 {/* 정보 */}
                 <div className="card-info">
-                  <div className="info-row">
-                    <span className="label">전송자</span>
-                    <span className="value">{order.uploaded_by || '-'}</span>
-                  </div>
+                  {/* 시간 */}
+                  <div className="card-time">{formatTime(order.created_at)}</div>
                   
-                  <div className="info-row">
-                    <span className="label">시간</span>
-                    <span className="value time">{formatTime(order.created_at)}</span>
-                  </div>
+                  {/* 거래처 */}
+                  {editingCard === order.id ? (
+                    <input
+                      type="text"
+                      className="edit-input"
+                      value={editForm.client_name}
+                      onChange={(e) => setEditForm({ ...editForm, client_name: e.target.value })}
+                      placeholder="거래처명"
+                    />
+                  ) : (
+                    <div className="card-title">{order.client_name || '미분류'}</div>
+                  )}
                   
-                  {/* 거래처 (수정 가능) */}
-                  <div className="info-row">
-                    <span className="label">거래처</span>
-                    {editingCard === order.id ? (
-                      <input
-                        type="text"
-                        className="edit-input"
-                        value={editForm.client_name}
-                        onChange={(e) => setEditForm({ ...editForm, client_name: e.target.value })}
-                        placeholder="거래처명"
-                      />
-                    ) : (
-                      <span className="value client">{order.client_name || '미분류'}</span>
-                    )}
-                  </div>
+                  {/* 현장명 */}
+                  {editingCard === order.id ? (
+                    <input
+                      type="text"
+                      className="edit-input"
+                      value={editForm.site_name}
+                      onChange={(e) => setEditForm({ ...editForm, site_name: e.target.value })}
+                      placeholder="현장명"
+                    />
+                  ) : (
+                    <div className="card-subtitle">{order.site_name || '-'}</div>
+                  )}
                   
-                  {/* 현장명 (수정 가능) */}
-                  <div className="info-row">
-                    <span className="label">현장명</span>
-                    {editingCard === order.id ? (
-                      <input
-                        type="text"
-                        className="edit-input"
-                        value={editForm.site_name}
-                        onChange={(e) => setEditForm({ ...editForm, site_name: e.target.value })}
-                        placeholder="현장명"
-                      />
-                    ) : (
-                      <span className="value site">{order.site_name || '-'}</span>
-                    )}
+                  {/* 전송자 */}
+                  <div className="card-meta">
+                    <span>전송자</span>
+                    <span>{order.uploaded_by || '-'}</span>
                   </div>
                   
                   {/* 수정 버튼 */}
                   <div className="card-actions">
                     {editingCard === order.id ? (
                       <>
-                        <button 
-                          className="btn-save"
-                          onClick={() => handleEditSave(order.id)}
-                        >
-                          ✓ 저장
+                        <button className="btn-save" onClick={() => handleEditSave(order.id)}>
+                          저장
                         </button>
-                        <button 
-                          className="btn-cancel"
-                          onClick={handleEditCancel}
-                        >
-                          ✕ 취소
+                        <button className="btn-cancel" onClick={handleEditCancel}>
+                          취소
                         </button>
                       </>
                     ) : (
-                      <button 
-                        className="btn-edit"
-                        onClick={() => handleEditStart(order)}
-                      >
-                        ✎ 수정
+                      <button className="btn-edit" onClick={() => handleEditStart(order)}>
+                        수정
                       </button>
                     )}
                   </div>
@@ -338,27 +316,32 @@ const HomePage = () => {
       )}
       
       <style>{`
+        * {
+          box-sizing: border-box;
+        }
+        
         .dashboard-container {
           display: flex;
           height: calc(100vh - 80px);
           gap: 0;
           margin: -2rem -20px 0 -20px;
+          background: #ffffff;
         }
         
-        /* ===== 좌측 사이드바 (1920×1080 최적화) ===== */
+        /* ===== 좌측 사이드바 (중고차 스타일) ===== */
         .client-sidebar {
-          width: 320px;
-          background: #ffffff;
-          border-right: 2px solid #e0e0e0;
+          width: 280px;
+          background: #f7f7f7;
+          border-right: 1px solid #e0e0e0;
           display: flex;
           flex-direction: column;
           overflow: hidden;
         }
         
         .sidebar-header {
-          padding: 24px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
+          padding: 20px;
+          background: #ffffff;
+          border-bottom: 1px solid #e0e0e0;
           display: flex;
           justify-content: space-between;
           align-items: center;
@@ -366,127 +349,163 @@ const HomePage = () => {
         
         .sidebar-header h2 {
           margin: 0;
-          font-size: 20px;
-          font-weight: 600;
+          font-size: 16px;
+          font-weight: 700;
+          color: #222;
         }
         
         .client-count {
-          background: rgba(255,255,255,0.3);
-          padding: 6px 14px;
-          border-radius: 14px;
-          font-size: 14px;
+          background: #f0f0f0;
+          color: #666;
+          padding: 4px 10px;
+          border-radius: 12px;
+          font-size: 12px;
           font-weight: 600;
         }
         
         .search-box {
           padding: 16px;
+          background: #ffffff;
           border-bottom: 1px solid #e0e0e0;
         }
         
         .client-search-input {
           width: 100%;
-          padding: 12px 14px;
-          border: 2px solid #e0e0e0;
-          border-radius: 8px;
-          font-size: 15px;
-          transition: border-color 0.2s;
+          padding: 10px 14px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          font-size: 14px;
+          background: #ffffff;
+          color: #333;
         }
         
         .client-search-input:focus {
           outline: none;
-          border-color: #667eea;
+          border-color: #333;
+        }
+        
+        .filter-section {
+          padding: 8px 16px;
+          background: #ffffff;
+          border-bottom: 1px solid #e0e0e0;
         }
         
         .client-list {
           flex: 1;
           overflow-y: auto;
-          padding: 12px;
+          padding: 8px;
+          background: #f7f7f7;
         }
         
         .client-item {
-          padding: 14px 16px;
-          margin-bottom: 6px;
-          border-radius: 8px;
+          padding: 12px 16px;
+          margin-bottom: 4px;
+          border-radius: 4px;
           cursor: pointer;
-          transition: all 0.2s;
-          background: #f9f9f9;
-          border: 2px solid transparent;
-          font-size: 15px;
+          transition: all 0.15s;
+          background: #ffffff;
+          color: #333;
+          font-size: 14px;
+          border: 1px solid transparent;
         }
         
         .client-item:hover {
           background: #f0f0f0;
-          transform: translateX(5px);
+          border-color: #ddd;
         }
         
         .client-item.active {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
+          background: #222;
+          color: #ffffff;
           font-weight: 600;
-          border-color: #667eea;
+          border-color: #222;
         }
         
-        /* ===== 메인 컨텐츠 (1920×1080 최적화) ===== */
+        /* ===== 메인 컨텐츠 (깔끔한 흰색) ===== */
         .dashboard-main {
           flex: 1;
           overflow-y: auto;
-          background: #f5f5f5;
-          padding: 36px 40px;
+          background: #ffffff;
+          padding: 30px 40px;
         }
         
         .dashboard-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 32px;
+          margin-bottom: 30px;
+          padding-bottom: 20px;
+          border-bottom: 1px solid #e0e0e0;
         }
         
         .dashboard-header h1 {
-          margin: 0;
-          color: #333;
-          font-size: 32px;
+          margin: 0 0 6px 0;
+          color: #222;
+          font-size: 26px;
           font-weight: 700;
         }
         
-        .selected-client-badge {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          padding: 12px 24px;
-          border-radius: 24px;
-          font-weight: 600;
-          font-size: 18px;
+        .subtitle {
+          margin: 0;
+          color: #999;
+          font-size: 14px;
+          font-weight: 400;
         }
         
-        /* ===== 작업지시서 그리드 (1920×1080: 3-4개씩 표시, 큰 카드) ===== */
+        .selected-badge {
+          background: #222;
+          color: #ffffff;
+          padding: 8px 18px;
+          border-radius: 4px;
+          font-weight: 600;
+          font-size: 14px;
+        }
+        
+        /* ===== 작업지시서 그리드 (1920×1080: 3-4개) ===== */
         .work-order-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-          gap: 32px;
+          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+          gap: 24px;
           padding-bottom: 24px;
         }
         
-        /* ===== 작업지시서 카드 (A4 세로 비율 + 호버 효과) ===== */
+        /* ===== 카드 디자인 (중고차 스타일) ===== */
         .work-order-card {
-          background: white;
-          border-radius: 14px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+          background: #ffffff;
+          border: 1px solid #e0e0e0;
+          border-radius: 4px;
           overflow: hidden;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: all 0.2s;
           cursor: default;
+          position: relative;
         }
         
         .work-order-card:hover {
-          transform: translateY(-10px);
-          box-shadow: 0 16px 32px rgba(0,0,0,0.15);
+          border-color: #ccc;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        
+        .new-badge {
+          position: absolute;
+          top: 12px;
+          left: 12px;
+          background: #e53935;
+          color: #ffffff;
+          padding: 4px 10px;
+          border-radius: 2px;
+          font-size: 11px;
+          font-weight: 700;
+          z-index: 10;
+          letter-spacing: 0.5px;
         }
         
         .card-image {
           width: 100%;
-          aspect-ratio: 210 / 297; /* A4 세로 비율 */
-          background: #f0f0f0;
+          aspect-ratio: 4 / 3;
+          background: #f5f5f5;
           overflow: hidden;
-          position: relative;
           cursor: pointer;
+          border-bottom: 1px solid #e0e0e0;
         }
         
         .card-image img {
@@ -500,129 +519,105 @@ const HomePage = () => {
           transform: scale(1.05);
         }
         
-        .zoom-hint {
-          position: absolute;
-          bottom: 8px;
-          right: 8px;
-          background: rgba(0,0,0,0.7);
-          color: white;
-          padding: 6px 12px;
-          border-radius: 6px;
-          font-size: 12px;
-          opacity: 0;
-          transition: opacity 0.3s;
-        }
-        
-        .card-image:hover .zoom-hint {
-          opacity: 1;
-        }
-        
         .card-info {
-          padding: 18px;
-          background: white;
+          padding: 16px;
         }
         
-        .info-row {
+        .card-time {
+          color: #999;
+          font-size: 12px;
+          margin-bottom: 8px;
+        }
+        
+        .card-title {
+          font-size: 16px;
+          font-weight: 700;
+          color: #222;
+          margin-bottom: 6px;
+        }
+        
+        .card-subtitle {
+          font-size: 14px;
+          color: #666;
+          margin-bottom: 12px;
+        }
+        
+        .card-meta {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 12px;
-          padding-bottom: 12px;
-          border-bottom: 1px solid #f0f0f0;
-        }
-        
-        .info-row:last-of-type {
-          border-bottom: none;
-        }
-        
-        .info-row .label {
+          padding: 10px 0;
+          border-top: 1px solid #f0f0f0;
           font-size: 13px;
+          color: #666;
+          margin-bottom: 12px;
+        }
+        
+        .card-meta span:first-child {
           color: #999;
-          font-weight: 500;
         }
         
-        .info-row .value {
-          font-size: 15px;
-          color: #333;
+        .card-meta span:last-child {
           font-weight: 600;
-          text-align: right;
-          max-width: 60%;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        
-        .info-row .value.time {
-          color: #667eea;
-        }
-        
-        .info-row .value.client {
-          color: #764ba2;
-        }
-        
-        .info-row .value.site {
-          color: #f59e0b;
+          color: #333;
         }
         
         .edit-input {
-          padding: 6px 10px;
-          border: 2px solid #667eea;
-          border-radius: 6px;
+          width: 100%;
+          padding: 8px 12px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
           font-size: 14px;
-          width: 150px;
+          margin-bottom: 8px;
           font-weight: 600;
         }
         
         .edit-input:focus {
           outline: none;
-          border-color: #764ba2;
+          border-color: #333;
         }
         
         .card-actions {
           display: flex;
           gap: 8px;
-          margin-top: 14px;
-          padding-top: 14px;
-          border-top: 2px solid #f0f0f0;
         }
         
         .btn-edit, .btn-save, .btn-cancel {
           flex: 1;
-          padding: 10px 14px;
-          border: none;
-          border-radius: 8px;
-          font-size: 14px;
+          padding: 10px 16px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          font-size: 13px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
-        }
-        
-        .btn-edit {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
+          background: #ffffff;
+          color: #333;
         }
         
         .btn-edit:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+          background: #f5f5f5;
+          border-color: #333;
         }
         
         .btn-save {
-          background: #10b981;
-          color: white;
+          background: #222;
+          color: #ffffff;
+          border-color: #222;
         }
         
         .btn-save:hover {
-          background: #059669;
+          background: #000;
         }
         
         .btn-cancel {
-          background: #ef4444;
-          color: white;
+          background: #ffffff;
+          color: #666;
         }
         
         .btn-cancel:hover {
-          background: #dc2626;
+          background: #f5f5f5;
+          border-color: #999;
         }
         
         /* ===== 이미지 확대 모달 ===== */
@@ -637,7 +632,7 @@ const HomePage = () => {
           align-items: center;
           justify-content: center;
           z-index: 10000;
-          animation: fadeIn 0.3s;
+          animation: fadeIn 0.2s;
         }
         
         @keyframes fadeIn {
@@ -650,9 +645,8 @@ const HomePage = () => {
           max-width: 90vw;
           max-height: 90vh;
           background: white;
-          border-radius: 12px;
+          border-radius: 4px;
           overflow: hidden;
-          box-shadow: 0 24px 48px rgba(0,0,0,0.3);
         }
         
         .zoom-modal-content img {
@@ -666,13 +660,13 @@ const HomePage = () => {
           position: absolute;
           top: 16px;
           right: 16px;
-          width: 40px;
-          height: 40px;
+          width: 36px;
+          height: 36px;
           background: rgba(0,0,0,0.7);
           color: white;
           border: none;
           border-radius: 50%;
-          font-size: 24px;
+          font-size: 20px;
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -683,7 +677,6 @@ const HomePage = () => {
         
         .zoom-close:hover {
           background: rgba(0,0,0,0.9);
-          transform: scale(1.1);
         }
         
         /* ===== 로딩 및 빈 상태 ===== */
@@ -692,17 +685,18 @@ const HomePage = () => {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          height: 500px;
+          height: 400px;
           color: #999;
         }
         
         .spinner {
-          width: 50px;
-          height: 50px;
-          border: 4px solid #f0f0f0;
-          border-top-color: #667eea;
+          width: 40px;
+          height: 40px;
+          border: 3px solid #f0f0f0;
+          border-top-color: #333;
           border-radius: 50%;
-          animation: spin 1s linear infinite;
+          animation: spin 0.8s linear infinite;
+          margin-bottom: 16px;
         }
         
         @keyframes spin {
@@ -714,54 +708,50 @@ const HomePage = () => {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          height: 500px;
+          height: 400px;
           text-align: center;
         }
         
         .empty-icon {
-          font-size: 100px;
-          margin-bottom: 24px;
+          font-size: 80px;
+          margin-bottom: 20px;
         }
         
         .empty-dashboard h2 {
           color: #666;
-          margin-bottom: 12px;
-          font-size: 24px;
+          margin-bottom: 10px;
+          font-size: 20px;
         }
         
         .empty-dashboard p {
           color: #999;
-          font-size: 16px;
+          font-size: 14px;
         }
         
         .empty-state {
           text-align: center;
-          padding: 24px;
+          padding: 20px;
           color: #999;
-          font-size: 15px;
+          font-size: 14px;
         }
         
-        /* ===== 1920×1080 최적화 (큰 카드, 3열) ===== */
+        /* ===== 1920×1080 최적화 ===== */
         @media (min-width: 1920px) {
           .work-order-grid {
-            grid-template-columns: repeat(3, 1fr);
-            gap: 40px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 28px;
           }
           
           .dashboard-main {
-            padding: 40px 50px;
-          }
-          
-          .dashboard-header h1 {
-            font-size: 36px;
+            padding: 36px 50px;
           }
         }
         
         /* ===== 반응형 ===== */
         @media (max-width: 1200px) {
           .work-order-grid {
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            gap: 22px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
           }
         }
         
@@ -775,18 +765,18 @@ const HomePage = () => {
             width: 100%;
             max-height: 300px;
             border-right: none;
-            border-bottom: 2px solid #e0e0e0;
+            border-bottom: 1px solid #e0e0e0;
           }
           
           .work-order-grid {
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 18px;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 16px;
           }
           
           .dashboard-header {
             flex-direction: column;
             align-items: flex-start;
-            gap: 15px;
+            gap: 12px;
           }
         }
       `}</style>
