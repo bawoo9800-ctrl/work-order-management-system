@@ -59,15 +59,20 @@ function AppContent() {
 
       {/* Main Content */}
       <main className={isUploadPage ? "app-main-fullscreen" : "app-main"}>
-        <div className={isUploadPage ? "" : "container"}>
+        {location.pathname === '/' ? (
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/upload" element={<UploadPage />} />
-            <Route path="/work-orders" element={<WorkOrdersPage />} />
-            <Route path="/clients" element={<ClientsPage />} />
-            <Route path="/stats" element={<StatsPage />} />
           </Routes>
-        </div>
+        ) : (
+          <div className={isUploadPage ? "" : "container"}>
+            <Routes>
+              <Route path="/upload" element={<UploadPage />} />
+              <Route path="/work-orders" element={<WorkOrdersPage />} />
+              <Route path="/clients" element={<ClientsPage />} />
+              <Route path="/stats" element={<StatsPage />} />
+            </Routes>
+          </div>
+        )}
       </main>
 
       {/* Footer - 업로드 페이지에서는 숨김 */}

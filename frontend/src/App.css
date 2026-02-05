@@ -108,6 +108,10 @@ body {
 /* Main */
 .app-main {
   flex: 1;
+  padding: 0;
+}
+
+.app-main:has(.container) {
   padding: 2rem 0;
 }
 

@@ -367,11 +367,12 @@ const HomePage = () => {
         }
         
         .dashboard-container {
-          min-height: 100vh;
+          min-height: calc(100vh - 60px - 56px);
           background: #f8f8f8;
           padding: 0;
-          margin: -2rem -20px 0 -20px;
+          margin: 0;
           display: flex;
+          width: 100%;
         }
         
         /* ===== 좌측 사이드바 ===== */
