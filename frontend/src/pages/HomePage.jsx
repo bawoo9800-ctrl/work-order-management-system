@@ -330,21 +330,16 @@ const HomePage = () => {
                     </>
                   ) : (
                     <>
-                      {/* 작업지시서 타이틀 */}
-                      <div className="card-title-bar">
-                        <div className="card-title-text">작업지시서</div>
-                        <button className="btn-edit-inline" onClick={() => handleEditStart(order)}>
-                          ✎
-                        </button>
-                      </div>
-                      
-                      {/* 시간 / 전송자 / 현장명 한 줄 */}
+                      {/* 시간 / 전송자 / 현장명 / 수정 버튼 한 줄 */}
                       <div className="card-info-row">
                         <span className="info-item">{formatTime(order.created_at)}</span>
                         <span className="info-divider">•</span>
                         <span className="info-item">{order.uploaded_by || '전송자 미상'}</span>
                         <span className="info-divider">•</span>
                         <span className="info-item">{order.site_name || '현장명 없음'}</span>
+                        <button className="btn-edit-inline" onClick={() => handleEditStart(order)}>
+                          ✎
+                        </button>
                       </div>
                     </>
                   )}
@@ -623,39 +618,6 @@ const HomePage = () => {
           padding: 20px;
         }
         
-        /* ===== 카드 타이틀 바 ===== */
-        .card-title-bar {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 12px;
-          padding-bottom: 10px;
-          border-bottom: 2px solid #f0f0f0;
-        }
-        
-        .card-title-text {
-          font-size: 16px;
-          font-weight: 700;
-          color: #000;
-        }
-        
-        .btn-edit-inline {
-          padding: 4px 10px;
-          background: #ffffff;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          font-size: 16px;
-          cursor: pointer;
-          transition: all 0.2s;
-          color: #666;
-        }
-        
-        .btn-edit-inline:hover {
-          background: #f5f5f5;
-          border-color: #999;
-          color: #000;
-        }
-        
         /* ===== 카드 정보 한 줄 ===== */
         .card-info-row {
           display: flex;
@@ -673,6 +635,24 @@ const HomePage = () => {
         .info-divider {
           color: #ccc;
           font-size: 12px;
+        }
+        
+        .btn-edit-inline {
+          margin-left: auto;
+          padding: 4px 10px;
+          background: #ffffff;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s;
+          color: #666;
+        }
+        
+        .btn-edit-inline:hover {
+          background: #f5f5f5;
+          border-color: #999;
+          color: #000;
         }
         
         /* ===== 메타 정보 (시간 + 전송자) - 삭제 예정 ===== */

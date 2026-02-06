@@ -80,7 +80,8 @@ export const getAllWorkOrders = async (options = {}) => {
     SELECT 
       wo.*,
       c.code as client_code,
-      c.name as client_name
+      COALESCE(wo.client_name, c.name) as client_name,
+      wo.site_name
     FROM work_orders wo
     LEFT JOIN clients c ON wo.client_id = c.id
     ${whereClause}
@@ -176,6 +177,8 @@ export const createWorkOrder = async (workOrderData) => {
     image_width,
     image_height,
     client_id = null,
+    client_name = null,
+    site_name = null,
     classification_method = 'pending',
     confidence_score = null,
     reasoning = null,
@@ -184,15 +187,17 @@ export const createWorkOrder = async (workOrderData) => {
     status = 'pending',
     api_cost_usd = 0,
     processing_time_ms = 0,
+    uploaded_by = null,
+    uploaded_from = null,
   } = workOrderData;
 
   const sql = `
     INSERT INTO work_orders (
       uuid, original_filename, storage_path, file_size_bytes, mime_type,
-      image_width, image_height, client_id, classification_method,
-      confidence_score, reasoning, ocr_text, work_date, status,
-      api_cost_usd, processing_time_ms
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      image_width, image_height, client_id, client_name, site_name,
+      classification_method, confidence_score, reasoning, ocr_text, work_date, 
+      status, api_cost_usd, processing_time_ms, uploaded_by, uploaded_from
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const params = [
@@ -204,6 +209,8 @@ export const createWorkOrder = async (workOrderData) => {
     image_width,
     image_height,
     client_id,
+    client_name,
+    site_name,
     classification_method,
     confidence_score,
     reasoning,
@@ -212,6 +219,8 @@ export const createWorkOrder = async (workOrderData) => {
     status,
     api_cost_usd,
     processing_time_ms,
+    uploaded_by,
+    uploaded_from,
   ];
 
   const workOrderId = await insert(sql, params);
@@ -221,6 +230,8 @@ export const createWorkOrder = async (workOrderData) => {
     uuid,
     original_filename,
     client_id,
+    client_name,
+    uploaded_by,
     classification_method,
   });
 

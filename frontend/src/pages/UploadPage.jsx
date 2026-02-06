@@ -156,8 +156,11 @@ function UploadPage() {
       
       console.log('✅ 업로드 성공:', response);
       
-      // 업로드 성공 후 홈으로 이동
-      navigate('/', { replace: true });
+      // 업로드 성공 후 다시 업로드 페이지로 (초기화)
+      setFile(null);
+      setPreview(null);
+      setError(null);
+      // uploadedBy는 유지 (localStorage에 저장되어 있음)
     } catch (err) {
       console.error('❌ 업로드 실패:', err);
       console.error('에러 상세:', {
@@ -206,7 +209,7 @@ function UploadPage() {
               disabled={uploading}
             >
               <div className="camera-icon-large">📷</div>
-              <div className="camera-text-center">사진 촬영</div>
+              <div className="camera-text-center">작업지시서 촬영</div>
             </button>
           )}
         </div>
