@@ -385,6 +385,8 @@ const HomePage = () => {
           margin: 0;
           display: flex;
           width: 100%;
+          transform: translateZ(0);
+          -webkit-overflow-scrolling: touch;
         }
         
         /* ===== 좌측 사이드바 ===== */
@@ -529,6 +531,8 @@ const HomePage = () => {
           grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
           gap: 30px;
           padding-bottom: 40px;
+          will-change: scroll-position;
+          transform: translateZ(0);
         }
         
         /* ===== 카드 디자인 (심플 작업지시서) ===== */
@@ -548,6 +552,7 @@ const HomePage = () => {
         .work-order-card:hover {
           border-color: #999;
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          transform: translateZ(0);
         }
         
         .card-image {
@@ -586,6 +591,8 @@ const HomePage = () => {
           opacity: 0;
           transition: opacity 0.2s;
           pointer-events: none;
+          will-change: opacity;
+          transform: translateZ(0);
         }
         
         .card-image:hover .click-hint {
