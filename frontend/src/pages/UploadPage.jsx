@@ -17,7 +17,7 @@ function UploadPage() {
   });
 
   // 이미지 압축 함수
-  const compressImage = async (file, maxWidth = 1920, maxHeight = 1920, quality = 0.85) => {
+  const compressImage = async (file, maxWidth = 1280, maxHeight = 1280, quality = 0.70) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);

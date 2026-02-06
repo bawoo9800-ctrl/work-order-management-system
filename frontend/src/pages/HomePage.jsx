@@ -124,10 +124,16 @@ const HomePage = () => {
   const handleEditSave = async (orderId) => {
     try {
       await workOrderAPI.update(orderId, editForm);
+      
+      // 로컬 상태 업데이트
       setWorkOrders(workOrders.map(order => 
         order.id === orderId ? { ...order, ...editForm } : order
       ));
       setEditingCard(null);
+      
+      // 서버에서 최신 데이터 다시 가져오기
+      await fetchTodayWorkOrders(selectedClient?.id);
+      
       console.log('✅ 수정 완료:', editForm);
     } catch (error) {
       console.error('❌ 수정 실패:', error);
@@ -324,38 +330,36 @@ const HomePage = () => {
                     </>
                   ) : (
                     <>
-                      {/* 시간 + 전송자 (한 줄, 작은 폰트) */}
-                      <div className="meta-row">
-                        <span className="meta-text">{formatTime(order.created_at)}</span>
-                        <span className="meta-divider">•</span>
-                        <span className="meta-text">{order.uploaded_by || '전송자 미상'}</span>
+                      {/* 작업지시서 타이틀 */}
+                      <div className="card-title-bar">
+                        <div className="card-title-text">작업지시서</div>
+                        <button className="btn-edit-inline" onClick={() => handleEditStart(order)}>
+                          ✎
+                        </button>
                       </div>
                       
-                      {/* 현장명 */}
-                      <div className="info-row">
-                        <span className="info-label">현장명</span>
-                        <span className="info-value">{order.site_name || '-'}</span>
+                      {/* 시간 / 전송자 / 현장명 한 줄 */}
+                      <div className="card-info-row">
+                        <span className="info-item">{formatTime(order.created_at)}</span>
+                        <span className="info-divider">•</span>
+                        <span className="info-item">{order.uploaded_by || '전송자 미상'}</span>
+                        <span className="info-divider">•</span>
+                        <span className="info-item">{order.site_name || '현장명 없음'}</span>
                       </div>
                     </>
                   )}
                   
-                  {/* 수정 버튼 */}
-                  <div className="card-actions">
-                    {editingCard === order.id ? (
-                      <>
-                        <button className="btn-save" onClick={() => handleEditSave(order.id)}>
-                          ✓
-                        </button>
-                        <button className="btn-cancel" onClick={handleEditCancel}>
-                          ✕
-                        </button>
-                      </>
-                    ) : (
-                      <button className="btn-edit" onClick={() => handleEditStart(order)}>
-                        ✎
+                  {/* 수정 모드 버튼 */}
+                  {editingCard === order.id && (
+                    <div className="card-actions">
+                      <button className="btn-save" onClick={() => handleEditSave(order.id)}>
+                        ✓
                       </button>
-                    )}
-                  </div>
+                      <button className="btn-cancel" onClick={handleEditCancel}>
+                        ✕
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -619,7 +623,59 @@ const HomePage = () => {
           padding: 20px;
         }
         
-        /* ===== 메타 정보 (시간 + 전송자) ===== */
+        /* ===== 카드 타이틀 바 ===== */
+        .card-title-bar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+          padding-bottom: 10px;
+          border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .card-title-text {
+          font-size: 16px;
+          font-weight: 700;
+          color: #000;
+        }
+        
+        .btn-edit-inline {
+          padding: 4px 10px;
+          background: #ffffff;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          font-size: 16px;
+          cursor: pointer;
+          transition: all 0.2s;
+          color: #666;
+        }
+        
+        .btn-edit-inline:hover {
+          background: #f5f5f5;
+          border-color: #999;
+          color: #000;
+        }
+        
+        /* ===== 카드 정보 한 줄 ===== */
+        .card-info-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+        
+        .info-item {
+          color: #666;
+          font-size: 13px;
+          font-weight: 400;
+        }
+        
+        .info-divider {
+          color: #ccc;
+          font-size: 12px;
+        }
+        
+        /* ===== 메타 정보 (시간 + 전송자) - 삭제 예정 ===== */
         .meta-row {
           display: flex;
           align-items: center;
