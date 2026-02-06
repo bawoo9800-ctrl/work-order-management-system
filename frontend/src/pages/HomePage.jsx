@@ -239,16 +239,13 @@ const HomePage = () => {
     try {
       await workOrderAPI.update(zoomedOrder.id, modalForm);
       
-      // 로컬 상태 업데이트
-      setWorkOrders(workOrders.map(order => 
-        order.id === zoomedOrder.id ? { ...order, ...modalForm } : order
-      ));
-      
       alert('저장되었습니다.');
-      closeImageZoom();
       
       // 서버에서 최신 데이터 다시 가져오기
       await fetchTodayWorkOrders(selectedClient?.id);
+      
+      // 모달 닫기 (데이터 새로고침 후)
+      closeImageZoom();
     } catch (error) {
       console.error('❌ 저장 실패:', error);
       alert('저장에 실패했습니다.');
