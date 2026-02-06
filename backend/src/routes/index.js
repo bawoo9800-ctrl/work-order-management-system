@@ -11,6 +11,7 @@ import express from 'express';
 import clientRoutes from './client.routes.js';
 import workOrderRoutes from './workOrder.routes.js';
 import userRoutes from './user.routes.js';
+import statsRoutes from './stats.routes.js';
 import * as healthController from '../controllers/health.controller.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
 
@@ -28,7 +29,8 @@ router.get('/health', asyncHandler(healthController.healthCheck));
 router.use('/api/v1/clients', clientRoutes);
 router.use('/api/v1/work-orders', workOrderRoutes);
 router.use('/api/v1/users', userRoutes);
-router.get('/api/v1/stats', asyncHandler(healthController.getStats));
+router.use('/api/v1/stats', statsRoutes);
+router.get('/api/v1/stats-old', asyncHandler(healthController.getStats));
 
 /**
  * API 루트 정보
