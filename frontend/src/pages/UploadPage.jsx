@@ -9,25 +9,102 @@ function UploadPage() {
   const [preview, setPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
+  const [compressing, setCompressing] = useState(false);
   
   // 전송자 필드 (localStorage에서 이전 값 불러오기)
   const [uploadedBy, setUploadedBy] = useState(() => {
     return localStorage.getItem('lastUploadedBy') || '';
   });
 
+  // 이미지 압축 함수
+  const compressImage = async (file, maxWidth = 1920, maxHeight = 1920, quality = 0.85) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // 비율 유지하면서 리사이징
+          if (width > height) {
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Canvas를 Blob으로 변환
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                // Blob을 File 객체로 변환
+                const compressedFile = new File([blob], file.name, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now(),
+                });
+                
+                console.log('📦 압축 완료:', {
+                  원본크기: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
+                  압축크기: `${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`,
+                  압축률: `${((1 - compressedFile.size / file.size) * 100).toFixed(1)}%`,
+                  원본해상도: `${img.width}x${img.height}`,
+                  압축해상도: `${width}x${height}`,
+                });
+                
+                resolve(compressedFile);
+              } else {
+                reject(new Error('이미지 압축에 실패했습니다.'));
+              }
+            },
+            'image/jpeg',
+            quality
+          );
+        };
+        img.onerror = () => reject(new Error('이미지 로드에 실패했습니다.'));
+      };
+      reader.onerror = () => reject(new Error('파일 읽기에 실패했습니다.'));
+    });
+  };
+
   // 파일 선택 처리
-  const handleFileSelect = (e) => {
+  const handleFileSelect = async (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
-      setFile(selectedFile);
+      setCompressing(true);
       setError(null);
 
-      // 이미지 미리보기
-      const reader = new FileReader();
-      reader.onload = () => {
-        setPreview(reader.result);
-      };
-      reader.readAsDataURL(selectedFile);
+      try {
+        // 이미지 압축
+        const compressedFile = await compressImage(selectedFile);
+        setFile(compressedFile);
+
+        // 이미지 미리보기
+        const reader = new FileReader();
+        reader.onload = () => {
+          setPreview(reader.result);
+        };
+        reader.readAsDataURL(compressedFile);
+      } catch (err) {
+        console.error('압축 실패:', err);
+        setError('이미지 처리에 실패했습니다.');
+      } finally {
+        setCompressing(false);
+      }
     }
   };
 
@@ -94,14 +171,22 @@ function UploadPage() {
       {!preview ? (
         /* 촬영 화면 */
         <div className="camera-screen">
-          <button
-            onClick={handleCameraClick}
-            className="camera-button-center"
-            disabled={uploading}
-          >
-            <div className="camera-icon-large">📷</div>
-            <div className="camera-text-center">사진 촬영</div>
-          </button>
+          {compressing ? (
+            /* 압축 중 표시 */
+            <div className="compressing-container">
+              <div className="spinner-large"></div>
+              <div className="compressing-text">이미지 처리 중...</div>
+            </div>
+          ) : (
+            <button
+              onClick={handleCameraClick}
+              className="camera-button-center"
+              disabled={uploading}
+            >
+              <div className="camera-icon-large">📷</div>
+              <div className="camera-text-center">사진 촬영</div>
+            </button>
+          )}
         </div>
       ) : (
         /* 미리보기 및 전송 화면 */
@@ -212,6 +297,34 @@ function UploadPage() {
           font-size: 16px;
           font-weight: 600;
           color: #fff;
+          text-align: center;
+        }
+
+        /* ===== 압축 중 표시 ===== */
+        .compressing-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 20px;
+        }
+
+        .spinner-large {
+          width: 60px;
+          height: 60px;
+          border: 4px solid rgba(255, 255, 255, 0.2);
+          border-top-color: #ffffff;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        .compressing-text {
+          font-size: 18px;
+          font-weight: 600;
+          color: #ffffff;
           text-align: center;
         }
 
