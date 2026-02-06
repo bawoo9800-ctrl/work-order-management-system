@@ -47,9 +47,10 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
     originalFilename: originalname,
     fileSize: buffer.length,
     mimeType: mimetype,
-    clientName,
-    siteName,
-    uploadedBy,
+    clientName: clientName || '(없음)',
+    siteName: siteName || '(없음)',
+    uploadedBy: uploadedBy.trim(),
+    requestBody: req.body,
   });
 
   try {
@@ -66,6 +67,8 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
       image_width: imageResult.imageWidth,
       image_height: imageResult.imageHeight,
       client_id: null, // 수동 입력이므로 null
+      client_name: clientName?.trim() || null,
+      site_name: siteName?.trim() || null,
       classification_method: 'manual',
       confidence_score: null,
       reasoning: clientName ? `수동 입력: ${clientName}` : '수동 업로드',
@@ -78,6 +81,13 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
       uploaded_by: uploadedBy.trim(),
       uploaded_from: 'web',
     };
+
+    logger.info('📝 DB 저장 데이터:', {
+      uuid: workOrderData.uuid,
+      uploaded_by: workOrderData.uploaded_by,
+      client_name: workOrderData.client_name,
+      site_name: workOrderData.site_name,
+    });
 
     const workOrderId = await WorkOrderModel.createWorkOrder(workOrderData);
 

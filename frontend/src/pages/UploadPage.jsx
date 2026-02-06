@@ -120,7 +120,9 @@ function UploadPage() {
       return;
     }
 
-    if (!uploadedBy.trim()) {
+    const trimmedUploadedBy = uploadedBy.trim();
+    
+    if (!trimmedUploadedBy) {
       setError('전송자명을 입력해주세요.');
       return;
     }
@@ -130,19 +132,39 @@ function UploadPage() {
       setError(null);
       
       // 전송자명 저장
-      localStorage.setItem('lastUploadedBy', uploadedBy.trim());
+      localStorage.setItem('lastUploadedBy', trimmedUploadedBy);
       
       // FormData 생성
       const formData = new FormData();
       formData.append('image', file);
-      formData.append('uploadedBy', uploadedBy);
+      formData.append('uploadedBy', trimmedUploadedBy);
+      formData.append('clientName', ''); // 빈 문자열로라도 전송
+      formData.append('siteName', ''); // 빈 문자열로라도 전송
       
-      await workOrderAPI.upload(formData);
+      // 디버깅 로그
+      console.log('📤 업로드 시작:', {
+        파일명: file.name,
+        파일크기: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
+        전송자: trimmedUploadedBy,
+        FormData확인: {
+          image: file,
+          uploadedBy: trimmedUploadedBy,
+        }
+      });
+      
+      const response = await workOrderAPI.upload(formData);
+      
+      console.log('✅ 업로드 성공:', response);
       
       // 업로드 성공 후 홈으로 이동
       navigate('/', { replace: true });
     } catch (err) {
-      console.error('Upload failed:', err);
+      console.error('❌ 업로드 실패:', err);
+      console.error('에러 상세:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+      });
       setError(err.response?.data?.error?.message || '업로드에 실패했습니다.');
     } finally {
       setUploading(false);
