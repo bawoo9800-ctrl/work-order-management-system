@@ -5,10 +5,10 @@ import './App.css';
 // Pages
 import HomePage from './pages/HomePage';
 import UploadPage from './pages/UploadPage';
-import WorkOrdersPage from './pages/WorkOrdersPage';
 import CalendarPage from './pages/CalendarPage';
 import StatsPage from './pages/StatsPage';
 import ClientsPage from './pages/ClientsPage';
+import AdminPage from './pages/AdminPage';
 
 // API
 import { healthAPI } from './services/api';
@@ -43,9 +43,9 @@ function AppContent() {
               <Link to="/" className="nav-link">홈</Link>
               <Link to="/calendar" className="nav-link">달력</Link>
               <Link to="/upload" className="nav-link">업로드</Link>
-              <Link to="/work-orders" className="nav-link">작업지시서</Link>
               <Link to="/clients" className="nav-link">거래처</Link>
               <Link to="/stats" className="nav-link">통계</Link>
+              <Link to="/admin" className="nav-link">관리</Link>
             </nav>
             <div className="health-status">
               {healthStatus === 'healthy' && (
@@ -70,9 +70,9 @@ function AppContent() {
             <Routes>
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/upload" element={<UploadPage />} />
-              <Route path="/work-orders" element={<WorkOrdersPage />} />
               <Route path="/clients" element={<ClientsPage />} />
               <Route path="/stats" element={<StatsPage />} />
+              <Route path="/admin" element={<AdminPage />} />
             </Routes>
           </div>
         )}

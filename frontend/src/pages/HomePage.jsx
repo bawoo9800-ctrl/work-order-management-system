@@ -160,6 +160,25 @@ const HomePage = () => {
     setEditForm({ client_name: '', site_name: '' });
   };
   
+  // 카드 삭제
+  const handleDelete = async (orderId) => {
+    if (!window.confirm('정말로 이 작업지시서를 삭제하시겠습니까?')) {
+      return;
+    }
+    
+    try {
+      await workOrderAPI.delete(orderId);
+      
+      // 로컬 상태에서 제거
+      setWorkOrders(workOrders.filter(order => order.id !== orderId));
+      
+      console.log('✅ 삭제 완료:', orderId);
+    } catch (error) {
+      console.error('❌ 삭제 실패:', error);
+      alert('삭제에 실패했습니다.');
+    }
+  };
+  
   // 이미지 확대
   const handleImageZoom = (imageUrl) => {
     setZoomedImage(imageUrl);
@@ -358,6 +377,9 @@ const HomePage = () => {
                         <span className="info-item">{order.site_name || '현장명 없음'}</span>
                         <button className="btn-edit-inline" onClick={() => handleEditStart(order)}>
                           ✎
+                        </button>
+                        <button className="btn-delete-inline" onClick={() => handleDelete(order.id)}>
+                          🗑️
                         </button>
                       </div>
                     </>
@@ -672,6 +694,23 @@ const HomePage = () => {
           background: #f5f5f5;
           border-color: #999;
           color: #000;
+        }
+        
+        .btn-delete-inline {
+          padding: 4px 10px;
+          background: #ffffff;
+          border: 1px solid #ffdddd;
+          border-radius: 4px;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s;
+          color: #666;
+        }
+        
+        .btn-delete-inline:hover {
+          background: #ffe5e5;
+          border-color: #ff6666;
+          color: #ff0000;
         }
         
         /* ===== 메타 정보 (시간 + 전송자) - 삭제 예정 ===== */
