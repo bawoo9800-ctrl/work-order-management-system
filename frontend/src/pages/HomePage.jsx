@@ -207,6 +207,29 @@ const HomePage = () => {
       site_name: '',
       memo: ''
     });
+    setShowAutocomplete(false);
+  };
+  
+  // 모달 거래처명 자동완성
+  const handleModalClientNameChange = (e) => {
+    const value = e.target.value;
+    setModalForm({ ...modalForm, client_name: value });
+    
+    if (value.trim()) {
+      const filtered = clients
+        .filter(client => client.name && client.name.toLowerCase().includes(value.toLowerCase()))
+        .slice(0, 5);
+      setFilteredClientNames(filtered);
+      setShowAutocomplete(filtered.length > 0);
+    } else {
+      setShowAutocomplete(false);
+    }
+  };
+  
+  // 모달 자동완성 선택
+  const handleModalSelectClient = (clientName) => {
+    setModalForm({ ...modalForm, client_name: clientName });
+    setShowAutocomplete(false);
   };
   
   // 모달에서 저장
@@ -501,13 +524,33 @@ const HomePage = () => {
               {/* 거래처명 */}
               <div className="modal-form-group">
                 <label className="modal-label">거래처명</label>
-                <input
-                  type="text"
-                  className="modal-input"
-                  value={modalForm.client_name}
-                  onChange={(e) => setModalForm({ ...modalForm, client_name: e.target.value })}
-                  placeholder="거래처명을 입력하세요"
-                />
+                <div className="modal-autocomplete-wrapper">
+                  <input
+                    type="text"
+                    className="modal-input"
+                    value={modalForm.client_name}
+                    onChange={handleModalClientNameChange}
+                    onFocus={() => {
+                      if (modalForm.client_name.trim() && filteredClientNames.length > 0) {
+                        setShowAutocomplete(true);
+                      }
+                    }}
+                    placeholder="거래처명을 입력하세요"
+                  />
+                  {showAutocomplete && (
+                    <ul className="modal-autocomplete-list">
+                      {filteredClientNames.map((client) => (
+                        <li
+                          key={client.id}
+                          onClick={() => handleModalSelectClient(client.name)}
+                          className="modal-autocomplete-item"
+                        >
+                          {client.name}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
               
               {/* 현장명 */}
@@ -1134,6 +1177,46 @@ const HomePage = () => {
         .modal-input:focus {
           outline: none;
           border-color: #4CAF50;
+        }
+        
+        .modal-autocomplete-wrapper {
+          position: relative;
+        }
+        
+        .modal-autocomplete-list {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          background: white;
+          border: 1px solid #ddd;
+          border-top: none;
+          border-radius: 0 0 6px 6px;
+          max-height: 200px;
+          overflow-y: auto;
+          z-index: 1000;
+          margin: 0;
+          padding: 0;
+          list-style: none;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .modal-autocomplete-item {
+          padding: 12px;
+          cursor: pointer;
+          font-size: 15px;
+          color: #333;
+          border-bottom: 1px solid #f0f0f0;
+          transition: background 0.2s;
+        }
+        
+        .modal-autocomplete-item:last-child {
+          border-bottom: none;
+        }
+        
+        .modal-autocomplete-item:hover {
+          background: #f5f5f5;
+          color: #000;
         }
         
         .modal-textarea {
