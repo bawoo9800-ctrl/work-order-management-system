@@ -21,6 +21,13 @@ const HomePage = () => {
   const [editingCard, setEditingCard] = useState(null);
   const [editForm, setEditForm] = useState({ client_name: '', site_name: '' });
   const [zoomedImage, setZoomedImage] = useState(null);
+  const [zoomedOrder, setZoomedOrder] = useState(null);
+  const [modalForm, setModalForm] = useState({
+    work_type: '',
+    client_name: '',
+    site_name: '',
+    memo: ''
+  });
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [filteredClientNames, setFilteredClientNames] = useState([]);
   const [imageCache, setImageCache] = useState(new Map());
@@ -180,12 +187,49 @@ const HomePage = () => {
   };
   
   // 이미지 확대
-  const handleImageZoom = (imageUrl) => {
-    setZoomedImage(imageUrl);
+  const handleImageZoom = (order) => {
+    setZoomedImage(getImageUrl(order));
+    setZoomedOrder(order);
+    setModalForm({
+      work_type: order.work_type || '',
+      client_name: order.client_name || '',
+      site_name: order.site_name || '',
+      memo: order.memo || ''
+    });
   };
   
   const closeImageZoom = () => {
     setZoomedImage(null);
+    setZoomedOrder(null);
+    setModalForm({
+      work_type: '',
+      client_name: '',
+      site_name: '',
+      memo: ''
+    });
+  };
+  
+  // 모달에서 저장
+  const handleModalSave = async () => {
+    if (!zoomedOrder) return;
+    
+    try {
+      await workOrderAPI.update(zoomedOrder.id, modalForm);
+      
+      // 로컬 상태 업데이트
+      setWorkOrders(workOrders.map(order => 
+        order.id === zoomedOrder.id ? { ...order, ...modalForm } : order
+      ));
+      
+      alert('저장되었습니다.');
+      closeImageZoom();
+      
+      // 서버에서 최신 데이터 다시 가져오기
+      await fetchTodayWorkOrders(selectedClient?.id);
+    } catch (error) {
+      console.error('❌ 저장 실패:', error);
+      alert('저장에 실패했습니다.');
+    }
   };
   
   // 이미지 URL 생성 (메모이제이션)
@@ -304,7 +348,7 @@ const HomePage = () => {
                 {/* 이미지 */}
                 <div 
                   className="card-image"
-                  onClick={() => handleImageZoom(getImageUrl(order))}
+                  onClick={() => handleImageZoom(order)}
                 >
                   <img 
                     src={getImageUrl(order)} 
@@ -404,11 +448,102 @@ const HomePage = () => {
       </main>
       
       {/* 이미지 확대 모달 */}
-      {zoomedImage && (
+      {zoomedImage && zoomedOrder && (
         <div className="image-zoom-modal" onClick={closeImageZoom}>
-          <div className="zoom-modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="zoom-close" onClick={closeImageZoom}>✕</button>
-            <img src={zoomedImage} alt="확대 이미지" />
+          <div className="zoom-modal-container" onClick={(e) => e.stopPropagation()}>
+            {/* 좌측: 이미지 */}
+            <div className="zoom-modal-left">
+              <button className="zoom-close" onClick={closeImageZoom}>✕</button>
+              <img src={zoomedImage} alt="확대 이미지" className="zoom-image" />
+            </div>
+            
+            {/* 우측: 폼 */}
+            <div className="zoom-modal-right">
+              <h3 className="modal-form-title">작업지시서 상세</h3>
+              
+              {/* 작업 유형 */}
+              <div className="modal-form-group">
+                <label className="modal-label">작업 유형</label>
+                <div className="radio-group">
+                  <label className="radio-label">
+                    <input
+                      type="radio"
+                      name="work_type"
+                      value="FSD"
+                      checked={modalForm.work_type === 'FSD'}
+                      onChange={(e) => setModalForm({ ...modalForm, work_type: e.target.value })}
+                    />
+                    <span>FSD</span>
+                  </label>
+                  <label className="radio-label">
+                    <input
+                      type="radio"
+                      name="work_type"
+                      value="SD"
+                      checked={modalForm.work_type === 'SD'}
+                      onChange={(e) => setModalForm({ ...modalForm, work_type: e.target.value })}
+                    />
+                    <span>SD</span>
+                  </label>
+                  <label className="radio-label">
+                    <input
+                      type="radio"
+                      name="work_type"
+                      value="기타품목"
+                      checked={modalForm.work_type === '기타품목'}
+                      onChange={(e) => setModalForm({ ...modalForm, work_type: e.target.value })}
+                    />
+                    <span>기타품목</span>
+                  </label>
+                </div>
+              </div>
+              
+              {/* 거래처명 */}
+              <div className="modal-form-group">
+                <label className="modal-label">거래처명</label>
+                <input
+                  type="text"
+                  className="modal-input"
+                  value={modalForm.client_name}
+                  onChange={(e) => setModalForm({ ...modalForm, client_name: e.target.value })}
+                  placeholder="거래처명을 입력하세요"
+                />
+              </div>
+              
+              {/* 현장명 */}
+              <div className="modal-form-group">
+                <label className="modal-label">현장명</label>
+                <input
+                  type="text"
+                  className="modal-input"
+                  value={modalForm.site_name}
+                  onChange={(e) => setModalForm({ ...modalForm, site_name: e.target.value })}
+                  placeholder="현장명을 입력하세요"
+                />
+              </div>
+              
+              {/* 메모 */}
+              <div className="modal-form-group">
+                <label className="modal-label">메모</label>
+                <textarea
+                  className="modal-textarea"
+                  value={modalForm.memo}
+                  onChange={(e) => setModalForm({ ...modalForm, memo: e.target.value })}
+                  placeholder="메모를 입력하세요"
+                  rows="4"
+                />
+              </div>
+              
+              {/* 버튼 */}
+              <div className="modal-buttons">
+                <button className="modal-btn modal-btn-save" onClick={handleModalSave}>
+                  ✓ 저장
+                </button>
+                <button className="modal-btn modal-btn-cancel" onClick={closeImageZoom}>
+                  ✕ 취소
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -868,7 +1003,7 @@ const HomePage = () => {
           left: 0;
           width: 100vw;
           height: 100vh;
-          background: rgba(0,0,0,0.95);
+          background: rgba(0,0,0,0.9);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -882,43 +1017,31 @@ const HomePage = () => {
           to { opacity: 1; }
         }
         
-        /* A4 세로 비율: 210mm × 297mm = 1:1.414 */
-        .zoom-modal-content {
-          position: relative;
-          width: auto;
-          height: calc(100vh - 40px);
-          max-height: 1000px;
-          aspect-ratio: 210 / 297;
+        .zoom-modal-container {
+          display: flex;
+          width: 90%;
+          max-width: 1400px;
+          height: 90vh;
           background: white;
-          border-radius: 8px;
+          border-radius: 12px;
           overflow: hidden;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+          box-shadow: 0 20px 60px rgba(0,0,0,0.5);
         }
         
-        /* 1920×1080 해상도 최적화 */
-        @media (min-width: 1920px) and (min-height: 1080px) {
-          .zoom-modal-content {
-            height: 980px;
-            max-height: 980px;
-          }
+        .zoom-modal-left {
+          flex: 1;
+          position: relative;
+          background: #f5f5f5;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
         }
         
-        /* 화면이 좁은 경우 */
-        @media (max-width: 768px) {
-          .zoom-modal-content {
-            width: calc(100vw - 40px);
-            height: auto;
-            max-height: calc(100vh - 40px);
-            aspect-ratio: 210 / 297;
-          }
-        }
-        
-        .zoom-modal-content img {
-          width: 100%;
-          height: 100%;
+        .zoom-image {
+          max-width: 100%;
+          max-height: 100%;
           object-fit: contain;
-          display: block;
-          background: #fafafa;
         }
         
         .zoom-close {
@@ -942,6 +1065,148 @@ const HomePage = () => {
         
         .zoom-close:hover {
           background: rgba(0,0,0,1);
+          transform: rotate(90deg);
+        }
+        
+        .zoom-modal-right {
+          width: 400px;
+          background: white;
+          padding: 30px;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+        }
+        
+        .modal-form-title {
+          font-size: 24px;
+          font-weight: 700;
+          color: #222;
+          margin: 0 0 24px 0;
+          padding-bottom: 16px;
+          border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .modal-form-group {
+          margin-bottom: 24px;
+        }
+        
+        .modal-label {
+          display: block;
+          font-size: 14px;
+          font-weight: 600;
+          color: #333;
+          margin-bottom: 8px;
+        }
+        
+        .radio-group {
+          display: flex;
+          gap: 16px;
+        }
+        
+        .radio-label {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          cursor: pointer;
+          font-size: 15px;
+          color: #666;
+        }
+        
+        .radio-label input[type="radio"] {
+          width: 18px;
+          height: 18px;
+          cursor: pointer;
+        }
+        
+        .radio-label:hover {
+          color: #222;
+        }
+        
+        .modal-input {
+          width: 100%;
+          padding: 12px;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          font-size: 15px;
+          transition: border-color 0.2s;
+        }
+        
+        .modal-input:focus {
+          outline: none;
+          border-color: #4CAF50;
+        }
+        
+        .modal-textarea {
+          width: 100%;
+          padding: 12px;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          font-size: 15px;
+          resize: vertical;
+          font-family: inherit;
+          transition: border-color 0.2s;
+        }
+        
+        .modal-textarea:focus {
+          outline: none;
+          border-color: #4CAF50;
+        }
+        
+        .modal-buttons {
+          display: flex;
+          gap: 12px;
+          margin-top: auto;
+          padding-top: 24px;
+        }
+        
+        .modal-btn {
+          flex: 1;
+          padding: 14px;
+          border: none;
+          border-radius: 8px;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        
+        .modal-btn-save {
+          background: #4CAF50;
+          color: white;
+        }
+        
+        .modal-btn-save:hover {
+          background: #45a049;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+        
+        .modal-btn-cancel {
+          background: #f5f5f5;
+          color: #666;
+        }
+        
+        .modal-btn-cancel:hover {
+          background: #e0e0e0;
+        }
+        
+        /* 모바일 대응 */
+        @media (max-width: 768px) {
+          .zoom-modal-container {
+            flex-direction: column;
+            width: 95%;
+            height: 95vh;
+          }
+          
+          .zoom-modal-left {
+            flex: 1;
+          }
+          
+          .zoom-modal-right {
+            width: 100%;
+            max-height: 50%;
+            padding: 20px;
+          }
         }
         
         /* ===== 로딩 및 빈 상태 ===== */

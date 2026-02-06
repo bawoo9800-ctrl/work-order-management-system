@@ -252,6 +252,8 @@ export const updateWorkOrder = async (id, updateData) => {
     'client_id',
     'client_name',
     'site_name',
+    'work_type',
+    'memo',
     'classification_method',
     'confidence_score',
     'reasoning',
