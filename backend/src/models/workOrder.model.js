@@ -46,7 +46,10 @@ export const getAllWorkOrders = async (options = {}) => {
 
   // 필터 조건 추가
   if (clientId) {
-    conditions.push('wo.client_id = ?');
+    // client_id로 매칭하거나, client_name으로 매칭
+    // (clients 테이블과 조인해서 이름 비교)
+    conditions.push('(wo.client_id = ? OR EXISTS (SELECT 1 FROM clients c WHERE c.id = ? AND wo.client_name = c.name))');
+    params.push(clientId);
     params.push(clientId);
   }
 

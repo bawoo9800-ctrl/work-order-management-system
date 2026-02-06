@@ -89,6 +89,20 @@ const HomePage = () => {
     }
   };
   
+  // 거래처별 작업지시서 개수 계산
+  const getClientOrderCount = (clientId, clientName) => {
+    return workOrders.filter(order => {
+      // client_id로 매칭하거나 client_name으로 매칭
+      if (clientId && order.client_id === clientId) {
+        return true;
+      }
+      if (clientName && order.client_name === clientName) {
+        return true;
+      }
+      return false;
+    }).length;
+  };
+  
   // 카드 수정
   const handleEditStart = (order) => {
     setEditingCard(order.id);
@@ -220,16 +234,21 @@ const HomePage = () => {
               <p>검색 결과가 없습니다.</p>
             </div>
           ) : (
-            filteredClients.map((client) => (
-              <div
-                key={client.id}
-                className={`client-item ${selectedClient?.id === client.id ? 'active' : ''}`}
-                onClick={() => handleClientClick(client)}
-              >
-                <span className="client-name">{client.name}</span>
-                <span className="client-badge">●</span>
-              </div>
-            ))
+            filteredClients.map((client) => {
+              const count = getClientOrderCount(client.id, client.name);
+              return (
+                <div
+                  key={client.id}
+                  className={`client-item ${selectedClient?.id === client.id ? 'active' : ''}`}
+                  onClick={() => handleClientClick(client)}
+                >
+                  <span className="client-name">{client.name}</span>
+                  {count > 0 && (
+                    <span className="client-count">{count}</span>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       </aside>
