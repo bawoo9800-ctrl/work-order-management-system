@@ -575,15 +575,44 @@ const CalendarPage = () => {
           align-items: center;
           justify-content: center;
           z-index: 10000;
+          animation: fadeIn 0.2s;
+          padding: 20px;
         }
 
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        /* A4 세로 비율: 210mm × 297mm = 1:1.414 */
         .zoom-modal-content {
           position: relative;
-          max-width: 90vw;
-          max-height: 90vh;
+          width: auto;
+          height: calc(100vh - 40px);
+          max-height: 1000px;
+          aspect-ratio: 210 / 297;
           background: white;
           border-radius: 8px;
           overflow: hidden;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+        }
+
+        /* 1920×1080 해상도 최적화 */
+        @media (min-width: 1920px) and (min-height: 1080px) {
+          .zoom-modal-content {
+            height: 980px;
+            max-height: 980px;
+          }
+        }
+
+        /* 화면이 좁은 경우 */
+        @media (max-width: 768px) {
+          .zoom-modal-content {
+            width: calc(100vw - 40px);
+            height: auto;
+            max-height: calc(100vh - 40px);
+            aspect-ratio: 210 / 297;
+          }
         }
 
         .zoom-modal-content img {
@@ -591,6 +620,7 @@ const CalendarPage = () => {
           height: 100%;
           object-fit: contain;
           display: block;
+          background: #fafafa;
         }
 
         .zoom-close {
