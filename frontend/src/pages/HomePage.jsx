@@ -58,7 +58,13 @@ const HomePage = () => {
       const orders = response.data?.workOrders || response.workOrders || [];
       setWorkOrders(orders);
       
-      console.log('📋 당일 작업지시서:', orders);
+      console.log('📋 Fetched work orders:', orders.length);
+      console.log('📋 First order work_type:', orders[0]?.work_type);
+      console.log('📋 Sample orders:', orders.slice(0, 3).map(o => ({
+        id: o.id,
+        work_type: o.work_type,
+        client_name: o.client_name
+      })));
     } catch (error) {
       console.error('❌ 작업지시서 조회 실패:', error);
     } finally {
@@ -188,9 +194,20 @@ const HomePage = () => {
   
   // 이미지 확대
   const handleImageZoom = (order) => {
+    console.log('🔍 Opening modal with order:', order);
+    console.log('📋 work_type:', order.work_type);
+    console.log('📝 memo:', order.memo);
+    
     setZoomedImage(getImageUrl(order));
     setZoomedOrder(order);
     setModalForm({
+      work_type: order.work_type || '',
+      client_name: order.client_name || '',
+      site_name: order.site_name || '',
+      memo: order.memo || ''
+    });
+    
+    console.log('✅ Modal form set:', {
       work_type: order.work_type || '',
       client_name: order.client_name || '',
       site_name: order.site_name || '',
@@ -236,13 +253,18 @@ const HomePage = () => {
   const handleModalSave = async () => {
     if (!zoomedOrder) return;
     
+    console.log('💾 Saving modal form:', modalForm);
+    
     try {
       await workOrderAPI.update(zoomedOrder.id, modalForm);
       
+      console.log('✅ Save successful');
       alert('저장되었습니다.');
       
       // 서버에서 최신 데이터 다시 가져오기
+      console.log('🔄 Fetching latest data...');
       await fetchTodayWorkOrders(selectedClient?.id);
+      console.log('✅ Data refreshed');
       
       // 모달 닫기 (데이터 새로고침 후)
       closeImageZoom();
