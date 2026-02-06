@@ -385,6 +385,13 @@ const HomePage = () => {
                   {/* 클릭 힌트 */}
                   <div className="click-hint">🔍 클릭하여 확대</div>
                   
+                  {/* 작업 유형 배지 (이미지 위 좌측 상단) */}
+                  {order.work_type && (
+                    <div className={`work-type-badge ${order.work_type === 'FSD' ? 'fsd-badge' : order.work_type === 'SD' ? 'sd-badge' : 'other-badge'}`}>
+                      {order.work_type}
+                    </div>
+                  )}
+                  
                   {/* 거래처명 배지 (이미지 위 우측 하단) */}
                   {!editingCard && order.client_name && (
                     <div className="client-badge">
@@ -815,6 +822,35 @@ const HomePage = () => {
         
         .card-image:hover .click-hint {
           opacity: 1;
+        }
+        
+        /* ===== 작업 유형 배지 (이미지 위 좌측 상단) ===== */
+        .work-type-badge {
+          position: absolute;
+          top: 12px;
+          left: 12px;
+          padding: 6px 14px;
+          border-radius: 6px;
+          font-size: 13px;
+          font-weight: 700;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+          z-index: 10;
+          letter-spacing: 0.5px;
+        }
+        
+        .fsd-badge {
+          background: linear-gradient(135deg, #ff4757 0%, #ff6348 100%);
+          color: white;
+        }
+        
+        .sd-badge {
+          background: linear-gradient(135deg, #1e90ff 0%, #4169e1 100%);
+          color: white;
+        }
+        
+        .other-badge {
+          background: linear-gradient(135deg, #ffa502 0%, #ff7f50 100%);
+          color: white;
         }
         
         /* ===== 거래처명 배지 (이미지 위 우측 하단) ===== */
