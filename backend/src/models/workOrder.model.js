@@ -248,6 +248,8 @@ export const createWorkOrder = async (workOrderData) => {
  * @returns {Promise<number>} 영향받은 행 수
  */
 export const updateWorkOrder = async (id, updateData) => {
+  logger.info('🔧 updateWorkOrder 호출', { id, updateData });
+  
   const allowedFields = [
     'client_id',
     'client_name',
@@ -267,11 +269,19 @@ export const updateWorkOrder = async (id, updateData) => {
   const updates = [];
   const params = [];
 
-  // 허용된 필드만 업데이트
+  // 허용된 필드만 업데이트 (빈 문자열 제외)
   for (const [key, value] of Object.entries(updateData)) {
     if (allowedFields.includes(key)) {
+      // 빈 문자열이면 스킵
+      if (value === '' || value === null || value === undefined) {
+        logger.info(`⏭️ 빈 값 스킵: ${key} = ${JSON.stringify(value)}`);
+        continue;
+      }
       updates.push(`${key} = ?`);
       params.push(value);
+      logger.info(`✅ 필드 추가: ${key} = ${JSON.stringify(value)}`);
+    } else {
+      logger.warn(`⚠️ 허용되지 않은 필드: ${key}`);
     }
   }
 
@@ -288,7 +298,8 @@ export const updateWorkOrder = async (id, updateData) => {
   logger.info('작업지시서 수정 완료', {
     id,
     affectedRows,
-    fields: Object.keys(updateData),
+    updatedFields: updates.map(u => u.split(' = ')[0]),
+    allFields: Object.keys(updateData),
   });
 
   return affectedRows;
