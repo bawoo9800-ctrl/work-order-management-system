@@ -385,7 +385,7 @@ const HomePage = () => {
         <div className="dashboard-header">
           <div>
             <h1>작업지시서</h1>
-            <p className="subtitle">{new Date(selectedDate).toLocaleDateString('ko-KR', { 
+            <p className="subtitle">{new Date(selectedDate + 'T00:00:00').toLocaleDateString('ko-KR', { 
               year: 'numeric',
               month: 'long', 
               day: 'numeric',
