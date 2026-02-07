@@ -1,132 +1,147 @@
 /**
  * ========================================
- * 알림 컴포넌트
+ * 실시간 알림 컴포넌트
  * ========================================
  * 파일: src/components/NotificationHandler.jsx
- * 설명: Firebase 알림 초기화 및 처리
+ * 설명: WebSocket 실시간 알림 처리 및 표시
  * ========================================
  */
 
-import { useEffect, useState } from 'react';
-import { requestNotificationPermission, onMessageListener } from '../config/firebase';
-import { notificationAPI } from '../services/api';
+import { useEffect } from 'react';
+import { useWebSocket } from '../hooks/useWebSocket';
 
 const NotificationHandler = () => {
-  const [notification, setNotification] = useState(null);
+  const { connected, notifications, removeNotification } = useWebSocket();
 
   useEffect(() => {
-    // Firebase 푸시 알림 임시 비활성화
-    // SSL 인증서 문제 해결 후 다시 활성화
-    console.info('🔕 Firebase 푸시 알림이 임시로 비활성화되었습니다.');
-    // initializeNotifications();
+    // 브라우저 알림 권한 요청
+    if (Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          console.log('✅ 브라우저 알림 권한 승인됨');
+        } else {
+          console.log('❌ 브라우저 알림 권한 거부됨');
+        }
+      });
+    }
   }, []);
 
-  const initializeNotifications = async () => {
-    try {
-      // VAPID 키 (Firebase Console → 프로젝트 설정 → Cloud Messaging → 웹 푸시 인증서)
-      // ⚠️ 나중에 실제 VAPID 키로 교체해야 합니다!
-      const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || 'YOUR_VAPID_KEY_HERE';
-
-      if (VAPID_KEY === 'YOUR_VAPID_KEY_HERE') {
-        console.warn('⚠️ VAPID key not configured. Please add it to .env file.');
-        return;
-      }
-
-      // FCM 토큰 요청
-      const token = await requestNotificationPermission(VAPID_KEY);
-
-      if (token) {
-        console.log('✅ FCM Token obtained:', token);
-
-        // 토큰을 백엔드에 저장
-        try {
-          await notificationAPI.registerToken(token);
-          console.log('✅ Token registered to backend');
-        } catch (error) {
-          console.error('❌ Failed to register token:', error);
-        }
-
-        // 포그라운드 메시지 리스너 설정
-        const unsubscribe = onMessageListener((payload) => {
-          console.log('📬 Foreground message received:', payload);
-
-          // 알림 표시
-          setNotification({
-            title: payload.notification?.title || '새 알림',
-            body: payload.notification?.body || '',
-            data: payload.data,
-          });
-
-          // 브라우저 알림 표시
-          if (Notification.permission === 'granted') {
-            new Notification(payload.notification?.title || '새 알림', {
-              body: payload.notification?.body || '',
-              icon: '/logo192.png',
-              badge: '/logo192.png',
-              tag: payload.data?.type || 'default',
-            });
-          }
-
-          // 5초 후 알림 제거
-          setTimeout(() => setNotification(null), 5000);
-        });
-
-        // 컴포넌트 언마운트 시 리스너 해제
-        return () => {
-          if (unsubscribe) unsubscribe();
-        };
-      }
-    } catch (error) {
-      console.error('❌ Notification initialization error:', error);
+  // 연결 상태 표시
+  useEffect(() => {
+    if (connected) {
+      console.log('✅ WebSocket 연결: 실시간 알림 활성화');
+    } else {
+      console.log('🔕 WebSocket 연결 해제: 실시간 알림 비활성화');
     }
-  };
+  }, [connected]);
 
-  // 인앱 알림 표시 (선택사항)
-  if (notification) {
-    return (
-      <div
-        style={{
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          background: 'white',
-          padding: '20px',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          zIndex: 10000,
-          minWidth: '300px',
-          maxWidth: '400px',
-          animation: 'slideIn 0.3s ease',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div style={{ flex: 1 }}>
-            <h4 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: 'bold' }}>
-              {notification.title}
-            </h4>
-            <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>
-              {notification.body}
-            </p>
-          </div>
-          <button
-            onClick={() => setNotification(null)}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '20px',
-              cursor: 'pointer',
-              color: '#999',
-              marginLeft: '12px',
-            }}
-          >
-            ×
-          </button>
+  // 알림 UI 렌더링
+  return (
+    <div style={{
+      position: 'fixed',
+      top: '20px',
+      right: '20px',
+      zIndex: 10000,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '12px',
+      maxWidth: '400px'
+    }}>
+      {/* WebSocket 연결 상태 (개발 모드에서만 표시) */}
+      {import.meta.env.DEV && (
+        <div style={{
+          padding: '8px 12px',
+          borderRadius: '4px',
+          background: connected ? '#4caf50' : '#ff9800',
+          color: 'white',
+          fontSize: '12px',
+          fontWeight: 'bold',
+          textAlign: 'center'
+        }}>
+          {connected ? '🔌 실시간 알림 활성화' : '🔕 연결 중...'}
         </div>
-      </div>
-    );
-  }
+      )}
 
-  return null;
+      {/* 알림 목록 */}
+      {notifications.slice(0, 3).map(notification => (
+        <div
+          key={notification.id}
+          style={{
+            background: 'white',
+            padding: '16px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            border: '1px solid #e0e0e0',
+            animation: 'slideInRight 0.3s ease',
+            minWidth: '300px',
+            cursor: 'pointer'
+          }}
+          onClick={() => removeNotification(notification.id)}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ flex: 1 }}>
+              <h4 style={{
+                margin: '0 0 8px 0',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                color: '#333'
+              }}>
+                {notification.title}
+              </h4>
+              <p style={{
+                margin: 0,
+                fontSize: '14px',
+                color: '#666',
+                lineHeight: '1.5'
+              }}>
+                {notification.body}
+              </p>
+              <p style={{
+                margin: '8px 0 0 0',
+                fontSize: '12px',
+                color: '#999'
+              }}>
+                {new Date(notification.timestamp).toLocaleTimeString('ko-KR')}
+              </p>
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                removeNotification(notification.id);
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                fontSize: '20px',
+                cursor: 'pointer',
+                color: '#999',
+                marginLeft: '12px',
+                padding: '0',
+                lineHeight: '1'
+              }}
+              title="닫기"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      ))}
+
+      {/* 애니메이션 스타일 */}
+      <style>{`
+        @keyframes slideInRight {
+          from {
+            transform: translateX(400px);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
+    </div>
+  );
 };
 
 export default NotificationHandler;

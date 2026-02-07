@@ -12,9 +12,11 @@
  */
 
 import dotenv from 'dotenv';
+import { createServer } from 'http';
 import app from './app.js';
 import { testConnection, closePool } from './config/database.js';
 import logger from './utils/logger.js';
+import { initializeSocket, getConnectedClientsCount } from './socket/socket.js';
 
 /**
  * 환경 변수 로딩
@@ -31,6 +33,7 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
  * 서버 인스턴스
  */
 let server;
+let io;
 
 /**
  * 서버 시작 함수
@@ -53,8 +56,15 @@ const startServer = async () => {
     
     logger.info('데이터베이스 연결 성공 ✓');
     
+    // HTTP 서버 생성
+    const httpServer = createServer(app);
+    
+    // Socket.IO 초기화
+    io = initializeSocket(httpServer);
+    logger.info('🔌 Socket.IO 서버가 초기화되었습니다.');
+    
     // HTTP 서버 시작
-    server = app.listen(PORT, () => {
+    server = httpServer.listen(PORT, () => {
       logger.info(`🚀 서버가 시작되었습니다!`, {
         port: PORT,
         environment: NODE_ENV,
@@ -70,6 +80,7 @@ const startServer = async () => {
       logger.info(`🏥 헬스체크: http://localhost:${PORT}/health`);
       logger.info(`📊 통계 API: http://localhost:${PORT}/api/v1/stats`);
       logger.info(`👥 거래처 API: http://localhost:${PORT}/api/v1/clients`);
+      logger.info(`🔌 WebSocket: 연결 대기 중... (현재 ${getConnectedClientsCount()}명 연결)`);
       logger.info('═'.repeat(50));
     });
     
@@ -94,6 +105,13 @@ const gracefulShutdown = async (signal) => {
   if (server) {
     server.close(async () => {
       logger.info('HTTP 서버 종료 완료');
+      
+      // Socket.IO 연결 종료
+      if (io) {
+        io.close(() => {
+          logger.info('Socket.IO 서버 종료 완료');
+        });
+      }
       
       // 데이터베이스 연결 종료
       await closePool();
