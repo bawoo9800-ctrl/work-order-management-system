@@ -15,7 +15,10 @@ const NotificationHandler = () => {
   const [notification, setNotification] = useState(null);
 
   useEffect(() => {
-    initializeNotifications();
+    // Firebase 푸시 알림 임시 비활성화
+    // SSL 인증서 문제 해결 후 다시 활성화
+    console.info('🔕 Firebase 푸시 알림이 임시로 비활성화되었습니다.');
+    // initializeNotifications();
   }, []);
 
   const initializeNotifications = async () => {
