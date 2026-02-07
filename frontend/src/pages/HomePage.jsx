@@ -1581,7 +1581,7 @@ const HomePage = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          z-index: 10000;
+          z-index: 999999;
           animation: fadeIn 0.2s ease;
         }
         
@@ -1592,6 +1592,8 @@ const HomePage = () => {
           width: 400px;
           max-width: 90%;
           animation: slideUp 0.3s ease;
+          position: relative;
+          z-index: 1000000;
         }
         
         .calendar-header {
