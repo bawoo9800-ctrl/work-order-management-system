@@ -208,6 +208,8 @@ export const updateWorkOrder = asyncHandler(async (req, res) => {
     'client_id',
     'client_name',
     'site_name',
+    'work_type',
+    'memo',
     'classification_method',
     'confidence_score',
     'reasoning',
