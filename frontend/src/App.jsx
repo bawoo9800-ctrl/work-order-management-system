@@ -21,16 +21,18 @@ function AppContent() {
   const [healthStatus, setHealthStatus] = useState(null);
   const isUploadPage = location.pathname === '/upload';
 
-  // 모바일 감지 및 자동 리다이렉트
+  // 모바일 감지 및 자동 리다이렉트 (최초 1회만)
   useEffect(() => {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const hasRedirected = sessionStorage.getItem('mobile_redirected');
     
-    // 모바일이고 홈 페이지(/)에 있으면 /upload로 리다이렉트
-    if (isMobile && location.pathname === '/') {
+    // 모바일이고 홈 페이지(/)에 있으며, 아직 리다이렉트하지 않았다면
+    if (isMobile && location.pathname === '/' && !hasRedirected) {
       console.log('📱 모바일 감지: 촬영 페이지로 자동 이동');
+      sessionStorage.setItem('mobile_redirected', 'true');
       navigate('/upload', { replace: true });
     }
-  }, [location.pathname, navigate]);
+  }, []);
 
   useEffect(() => {
     checkHealth();
