@@ -37,5 +37,7 @@ export default defineConfig({
   },
   build: {
     minify: false, // 디버깅 용이
+    target: ['es2015', 'safari11'], // iOS Safari 호환성
+    cssTarget: 'safari11',
   }
 })
