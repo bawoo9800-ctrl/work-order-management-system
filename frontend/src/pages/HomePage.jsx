@@ -302,7 +302,7 @@ const HomePage = () => {
       return imageCache.get(cacheKey);
     }
     
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
     const storagePath = workOrder.storage_path || '';
     
     let url;

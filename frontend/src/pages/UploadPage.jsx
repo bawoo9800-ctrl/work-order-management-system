@@ -29,7 +29,7 @@ function UploadPage() {
   const [users, setUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState('');
   
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
 
   // 사용자 목록 조회
   useEffect(() => {
