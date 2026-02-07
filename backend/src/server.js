@@ -63,8 +63,8 @@ const startServer = async () => {
     io = initializeSocket(httpServer);
     logger.info('🔌 Socket.IO 서버가 초기화되었습니다.');
     
-    // HTTP 서버 시작
-    server = httpServer.listen(PORT, () => {
+    // HTTP 서버 시작 (0.0.0.0에 바인딩하여 외부 접근 허용)
+    server = httpServer.listen(PORT, '0.0.0.0', () => {
       logger.info(`🚀 서버가 시작되었습니다!`, {
         port: PORT,
         environment: NODE_ENV,

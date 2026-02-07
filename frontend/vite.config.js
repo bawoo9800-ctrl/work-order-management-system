@@ -21,15 +21,15 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:3200',
+        target: 'http://192.168.0.109:3200',
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'http://localhost:3200',
+        target: 'http://192.168.0.109:3200',
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:3200',
+        target: 'http://192.168.0.109:3200',
         changeOrigin: true,
         ws: true, // WebSocket 프록시 활성화
       }
