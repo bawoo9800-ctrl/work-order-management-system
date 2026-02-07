@@ -10,7 +10,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.doorlife.synology.me';
+// Vite 개발 서버의 프록시를 사용하기 위해 상대 경로 사용
+// 프로덕션에서는 현재 도메인 사용
+const SOCKET_URL = import.meta.env.VITE_API_BASE_URL || window.location.origin;
 
 export const useWebSocket = () => {
   const [socket, setSocket] = useState(null);

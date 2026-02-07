@@ -27,6 +27,11 @@ export default defineConfig({
       '/uploads': {
         target: 'http://localhost:3200',
         changeOrigin: true,
+      },
+      '/socket.io': {
+        target: 'http://localhost:3200',
+        changeOrigin: true,
+        ws: true, // WebSocket 프록시 활성화
       }
     }
   },
