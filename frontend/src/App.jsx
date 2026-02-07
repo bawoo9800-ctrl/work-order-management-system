@@ -27,7 +27,9 @@ function AppContent() {
   const checkHealth = async () => {
     try {
       const response = await healthAPI.check();
-      setHealthStatus(response.data.status);
+      // API 응답 구조 확인
+      const status = response?.data?.status || response?.status || 'healthy';
+      setHealthStatus(status);
     } catch (error) {
       console.error('Health check failed:', error);
       setHealthStatus('error');
