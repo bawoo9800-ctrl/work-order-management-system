@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
 
 // Pages
@@ -17,8 +17,20 @@ import { healthAPI } from './services/api';
 
 function AppContent() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [healthStatus, setHealthStatus] = useState(null);
   const isUploadPage = location.pathname === '/upload';
+
+  // 모바일 감지 및 자동 리다이렉트
+  useEffect(() => {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    // 모바일이고 홈 페이지(/)에 있으면 /upload로 리다이렉트
+    if (isMobile && location.pathname === '/') {
+      console.log('📱 모바일 감지: 촬영 페이지로 자동 이동');
+      navigate('/upload', { replace: true });
+    }
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
     checkHealth();
