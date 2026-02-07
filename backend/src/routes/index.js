@@ -12,6 +12,7 @@ import clientRoutes from './client.routes.js';
 import workOrderRoutes from './workOrder.routes.js';
 import userRoutes from './user.routes.js';
 import statsRoutes from './stats.routes.js';
+import notificationRoutes from './notification.routes.js';
 import * as healthController from '../controllers/health.controller.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
 
@@ -30,6 +31,7 @@ router.use('/api/v1/clients', clientRoutes);
 router.use('/api/v1/work-orders', workOrderRoutes);
 router.use('/api/v1/users', userRoutes);
 router.use('/api/v1/stats', statsRoutes);
+router.use('/api/v1/notifications', notificationRoutes);
 router.get('/api/v1/stats-old', asyncHandler(healthController.getStats));
 
 /**
@@ -69,6 +71,12 @@ router.get('/api/v1', (req, res) => {
           recent: 'GET /api/v1/work-orders/recent',
           stats: 'GET /api/v1/work-orders/stats/summary',
           reclassify: 'POST /api/v1/work-orders/:id/reclassify',
+        },
+        notifications: {
+          register: 'POST /api/v1/notifications/register',
+          unregister: 'DELETE /api/v1/notifications/unregister',
+          status: 'GET /api/v1/notifications/status',
+          test: 'POST /api/v1/notifications/test',
         },
       },
       documentation: '/docs/API.md',

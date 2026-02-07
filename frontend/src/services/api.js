@@ -151,4 +151,41 @@ export const healthAPI = {
   },
 };
 
+/**
+ * 알림 API
+ */
+export const notificationAPI = {
+  // FCM 토큰 등록
+  registerToken: async (token, userId = null, deviceInfo = null) => {
+    const response = await apiClient.post('/api/v1/notifications/register', {
+      token,
+      userId,
+      deviceInfo: deviceInfo || navigator.userAgent,
+    });
+    return response.data;
+  },
+
+  // FCM 토큰 삭제 (구독 해제)
+  unregisterToken: async (token) => {
+    const response = await apiClient.delete('/api/v1/notifications/unregister', {
+      data: { token },
+    });
+    return response.data;
+  },
+
+  // 알림 상태 확인
+  getStatus: async () => {
+    const response = await apiClient.get('/api/v1/notifications/status');
+    return response.data;
+  },
+
+  // 테스트 알림 전송
+  sendTest: async (token) => {
+    const response = await apiClient.post('/api/v1/notifications/test', {
+      token,
+    });
+    return response.data;
+  },
+};
+
 export default apiClient;

@@ -26,6 +26,7 @@ import {
   notFoundHandler,
 } from './middleware/error.middleware.js';
 import logger from './utils/logger.js';
+import { initializeFirebase } from './services/notification.service.js';
 
 // ES 모듈에서 __dirname 사용하기 위한 설정
 const __filename = fileURLToPath(import.meta.url);
@@ -35,6 +36,11 @@ const __dirname = path.dirname(__filename);
  * Express 앱 생성
  */
 const app = express();
+
+/**
+ * Firebase 초기화
+ */
+initializeFirebase();
 
 /**
  * ========================================

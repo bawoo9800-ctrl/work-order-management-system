@@ -9,6 +9,9 @@ import StatsPage from './pages/StatsPage';
 import ClientsPage from './pages/ClientsPage';
 import AdminPage from './pages/AdminPage';
 
+// Components
+import NotificationHandler from './components/NotificationHandler';
+
 // API
 import { healthAPI } from './services/api';
 
@@ -33,6 +36,9 @@ function AppContent() {
 
   return (
     <div className="app">
+      {/* 알림 핸들러 */}
+      <NotificationHandler />
+      
       {/* Header - 업로드 페이지에서는 숨김 */}
       {!isUploadPage && (
         <header className="app-header">
