@@ -39,7 +39,7 @@ const HomePage = () => {
   
   // 초기 데이터 로딩
   useEffect(() => {
-    fetchTodayWorkOrders();
+    fetchWorkOrdersByDate(selectedDate);
     fetchClients();
   }, []);
   
