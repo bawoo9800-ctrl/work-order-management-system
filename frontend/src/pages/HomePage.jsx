@@ -31,6 +31,8 @@ const HomePage = () => {
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [filteredClientNames, setFilteredClientNames] = useState([]);
   const [imageCache, setImageCache] = useState(new Map());
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   
   // 오늘 날짜 (YYYY-MM-DD)
   const today = new Date().toISOString().split('T')[0];
@@ -41,13 +43,13 @@ const HomePage = () => {
     fetchClients();
   }, []);
   
-  // 당일 작업지시서 조회
-  const fetchTodayWorkOrders = async (clientId = null) => {
+  // 선택한 날짜의 작업지시서 조회
+  const fetchWorkOrdersByDate = async (date, clientId = null) => {
     setLoading(true);
     try {
       const params = {
-        startDate: today,
-        endDate: today,
+        startDate: date,
+        endDate: date,
       };
       
       if (clientId) {
@@ -70,6 +72,11 @@ const HomePage = () => {
     } finally {
       setLoading(false);
     }
+  };
+  
+  // 당일 작업지시서 조회 (backward compatibility)
+  const fetchTodayWorkOrders = async (clientId = null) => {
+    await fetchWorkOrdersByDate(selectedDate, clientId);
   };
   
   // 거래처 목록 조회
@@ -227,6 +234,20 @@ const HomePage = () => {
     setShowAutocomplete(false);
   };
   
+  // 날짜 선택 핸들러
+  const handleDateSelect = async (date) => {
+    setSelectedDate(date);
+    setShowCalendar(false);
+    await fetchWorkOrdersByDate(date, selectedClient?.id);
+  };
+  
+  // 오늘로 이동
+  const handleTodayClick = async () => {
+    setSelectedDate(today);
+    setShowCalendar(false);
+    await fetchWorkOrdersByDate(today, selectedClient?.id);
+  };
+  
   // 모달 거래처명 자동완성
   const handleModalClientNameChange = (e) => {
     const value = e.target.value;
@@ -363,12 +384,28 @@ const HomePage = () => {
         <div className="dashboard-header">
           <div>
             <h1>작업지시서</h1>
-            <p className="subtitle">{new Date().toLocaleDateString('ko-KR', { 
+            <p className="subtitle">{new Date(selectedDate).toLocaleDateString('ko-KR', { 
               year: 'numeric',
               month: 'long', 
               day: 'numeric',
               weekday: 'long'
             })}</p>
+          </div>
+          <div className="date-actions">
+            <button 
+              className="btn-date-picker"
+              onClick={() => setShowCalendar(true)}
+            >
+              📅 날짜 선택
+            </button>
+            {selectedDate !== today && (
+              <button 
+                className="btn-today"
+                onClick={handleTodayClick}
+              >
+                오늘로 이동
+              </button>
+            )}
           </div>
         </div>
         
@@ -617,6 +654,46 @@ const HomePage = () => {
         </div>
       )}
       
+      {/* 달력 모달 */}
+      {showCalendar && (
+        <div className="calendar-modal-overlay" onClick={() => setShowCalendar(false)}>
+          <div className="calendar-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="calendar-header">
+              <h2>📅 날짜 선택</h2>
+              <button className="btn-close" onClick={() => setShowCalendar(false)}>✕</button>
+            </div>
+            <div className="calendar-body">
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => handleDateSelect(e.target.value)}
+                max={today}
+                className="date-input"
+              />
+              <div className="quick-actions">
+                <button className="btn-quick" onClick={handleTodayClick}>
+                  오늘
+                </button>
+                <button className="btn-quick" onClick={() => {
+                  const yesterday = new Date();
+                  yesterday.setDate(yesterday.getDate() - 1);
+                  handleDateSelect(yesterday.toISOString().split('T')[0]);
+                }}>
+                  어제
+                </button>
+                <button className="btn-quick" onClick={() => {
+                  const weekAgo = new Date();
+                  weekAgo.setDate(weekAgo.getDate() - 7);
+                  handleDateSelect(weekAgo.toISOString().split('T')[0]);
+                }}>
+                  7일 전
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <style>{`
         * {
           box-sizing: border-box;
@@ -751,6 +828,9 @@ const HomePage = () => {
         }
         
         .dashboard-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
           margin-bottom: 40px;
         }
         
@@ -1450,6 +1530,156 @@ const HomePage = () => {
           
           .dashboard-header h1 {
             font-size: 24px;
+          }
+        }
+        
+        /* ===== 날짜 선택 버튼 ===== */
+        .date-actions {
+          display: flex;
+          gap: 12px;
+        }
+        
+        .btn-date-picker,
+        .btn-today {
+          padding: 10px 20px;
+          border: none;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .btn-date-picker {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-date-picker:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-today {
+          background: #f0f0f0;
+          color: #333;
+        }
+        
+        .btn-today:hover {
+          background: #e0e0e0;
+        }
+        
+        /* ===== 달력 모달 ===== */
+        .calendar-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10000;
+          animation: fadeIn 0.2s ease;
+        }
+        
+        .calendar-modal {
+          background: white;
+          border-radius: 16px;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+          width: 400px;
+          max-width: 90%;
+          animation: slideUp 0.3s ease;
+        }
+        
+        .calendar-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 24px;
+          border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .calendar-header h2 {
+          margin: 0;
+          font-size: 20px;
+          color: #333;
+        }
+        
+        .btn-close {
+          background: none;
+          border: none;
+          font-size: 24px;
+          color: #999;
+          cursor: pointer;
+          padding: 0;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+        }
+        
+        .btn-close:hover {
+          background: #f0f0f0;
+          color: #333;
+        }
+        
+        .calendar-body {
+          padding: 24px;
+        }
+        
+        .date-input {
+          width: 100%;
+          padding: 14px;
+          border: 2px solid #e0e0e0;
+          border-radius: 8px;
+          font-size: 16px;
+          transition: border-color 0.2s ease;
+        }
+        
+        .date-input:focus {
+          outline: none;
+          border-color: #667eea;
+        }
+        
+        .quick-actions {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+          margin-top: 20px;
+        }
+        
+        .btn-quick {
+          padding: 12px;
+          background: #f8f8f8;
+          border: 1px solid #e0e0e0;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          color: #333;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .btn-quick:hover {
+          background: #667eea;
+          color: white;
+          border-color: #667eea;
+        }
+        
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
           }
         }
       `}</style>
