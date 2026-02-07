@@ -36,8 +36,20 @@ export default defineConfig({
     }
   },
   build: {
-    minify: false, // 디버깅 용이
-    target: ['es2015', 'safari11'], // iOS Safari 호환성
-    cssTarget: 'safari11',
+    target: 'es2015', // iOS Safari 10+ 지원
+    cssTarget: 'safari10',
+    minify: 'terser', // terser로 변경 (더 안정적)
+    terserOptions: {
+      compress: {
+        drop_console: false,
+        drop_debugger: true,
+      },
+      safari10: true, // Safari 10 호환성
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: undefined, // 단일 번들로 빌드
+      },
+    },
   }
 })
