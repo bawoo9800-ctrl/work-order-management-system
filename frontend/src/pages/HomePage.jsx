@@ -326,7 +326,8 @@ const HomePage = () => {
   };
   
   return (
-    <div className="dashboard-container">
+    <>
+      <div className="dashboard-container">
       {/* 좌측 사이드바 - 거래처 리스트 */}
       <aside className="sidebar">
         <div className="sidebar-header">
@@ -653,48 +654,6 @@ const HomePage = () => {
           </div>
         </div>
       )}
-      
-      {/* 달력 모달 */}
-      <div 
-        className={`calendar-modal-overlay ${showCalendar ? 'active' : ''}`}
-        onClick={() => setShowCalendar(false)}
-        style={{ display: showCalendar ? 'flex' : 'none' }}
-      >
-        <div className="calendar-modal" onClick={(e) => e.stopPropagation()}>
-          <div className="calendar-header">
-            <h2>📅 날짜 선택</h2>
-            <button className="btn-close" onClick={() => setShowCalendar(false)}>✕</button>
-          </div>
-          <div className="calendar-body">
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => handleDateSelect(e.target.value)}
-              max={today}
-              className="date-input"
-            />
-            <div className="quick-actions">
-              <button className="btn-quick" onClick={handleTodayClick}>
-                오늘
-              </button>
-              <button className="btn-quick" onClick={() => {
-                const yesterday = new Date();
-                yesterday.setDate(yesterday.getDate() - 1);
-                handleDateSelect(yesterday.toISOString().split('T')[0]);
-              }}>
-                어제
-              </button>
-              <button className="btn-quick" onClick={() => {
-                const weekAgo = new Date();
-                weekAgo.setDate(weekAgo.getDate() - 7);
-                handleDateSelect(weekAgo.toISOString().split('T')[0]);
-              }}>
-                7일 전
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
       
       <style>{`
         * {
@@ -1688,6 +1647,49 @@ const HomePage = () => {
         }
       `}</style>
     </div>
+    
+    {/* 달력 모달 - dashboard-container 외부 */}
+    <div 
+      className={`calendar-modal-overlay ${showCalendar ? 'active' : ''}`}
+      onClick={() => setShowCalendar(false)}
+      style={{ display: showCalendar ? 'flex' : 'none' }}
+    >
+      <div className="calendar-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="calendar-header">
+          <h2>📅 날짜 선택</h2>
+          <button className="btn-close" onClick={() => setShowCalendar(false)}>✕</button>
+        </div>
+        <div className="calendar-body">
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => handleDateSelect(e.target.value)}
+            max={today}
+            className="date-input"
+          />
+          <div className="quick-actions">
+            <button className="btn-quick" onClick={handleTodayClick}>
+              오늘
+            </button>
+            <button className="btn-quick" onClick={() => {
+              const yesterday = new Date();
+              yesterday.setDate(yesterday.getDate() - 1);
+              handleDateSelect(yesterday.toISOString().split('T')[0]);
+            }}>
+              어제
+            </button>
+            <button className="btn-quick" onClick={() => {
+              const weekAgo = new Date();
+              weekAgo.setDate(weekAgo.getDate() - 7);
+              handleDateSelect(weekAgo.toISOString().split('T')[0]);
+            }}>
+              7일 전
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </>
   );
 };
 
