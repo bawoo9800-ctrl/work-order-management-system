@@ -32,10 +32,18 @@ const HomePage = () => {
   const [filteredClientNames, setFilteredClientNames] = useState([]);
   const [imageCache, setImageCache] = useState(new Map());
   const [showCalendar, setShowCalendar] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  // 한국 시간대로 오늘 날짜 가져오기 (YYYY-MM-DD)
+  const getKoreanDate = () => {
+    const now = new Date();
+    const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
+    return koreaTime.toISOString().split('T')[0];
+  };
+  
+  const [selectedDate, setSelectedDate] = useState(getKoreanDate());
   
   // 오늘 날짜 (YYYY-MM-DD)
-  const today = new Date().toISOString().split('T')[0];
+  const today = getKoreanDate();
   
   // 초기 데이터 로딩
   useEffect(() => {
