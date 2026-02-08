@@ -14,15 +14,19 @@ const NotificationHandler = () => {
   const { connected, notifications, removeNotification } = useWebSocket();
 
   useEffect(() => {
-    // 브라우저 알림 권한 요청
-    if (Notification.permission === 'default') {
+    // 브라우저 알림 권한 요청 (iOS Safari는 지원하지 않음)
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
       Notification.requestPermission().then(permission => {
         if (permission === 'granted') {
           console.log('✅ 브라우저 알림 권한 승인됨');
         } else {
           console.log('❌ 브라우저 알림 권한 거부됨');
         }
+      }).catch(err => {
+        console.log('⚠️ 브라우저 알림 미지원:', err.message);
       });
+    } else if (typeof Notification === 'undefined') {
+      console.log('⚠️ 브라우저 알림 API 미지원 (iOS Safari)');
     }
   }, []);
 

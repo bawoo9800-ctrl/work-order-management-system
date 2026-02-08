@@ -75,14 +75,18 @@ export const useWebSocket = () => {
         received: new Date().toISOString()
       }, ...prev]);
 
-      // 브라우저 알림 표시
-      if (Notification.permission === 'granted') {
-        new Notification(data.title, {
-          body: data.body,
-          icon: '/logo192.png',
-          badge: '/logo192.png',
-          tag: data.type
-        });
+      // 브라우저 알림 표시 (iOS Safari 호환)
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        try {
+          new Notification(data.title, {
+            body: data.body,
+            icon: '/logo192.png',
+            badge: '/logo192.png',
+            tag: data.type
+          });
+        } catch (err) {
+          console.log('⚠️ 브라우저 알림 표시 실패:', err.message);
+        }
       }
     });
 

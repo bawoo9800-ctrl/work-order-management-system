@@ -49,6 +49,12 @@ export const requestNotificationPermission = async (vapidKey) => {
     return null;
   }
 
+  // iOS Safari에서 Notification API 미지원 체크
+  if (typeof Notification === 'undefined') {
+    console.warn('⚠️ Notification API not supported (iOS Safari)');
+    return null;
+  }
+
   try {
     // 알림 권한 요청
     const permission = await Notification.requestPermission();
