@@ -15,6 +15,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { workOrderAPI } from '../services/api';
 import axios from 'axios';
+import { scanDocument, SCAN_PRESETS } from '../utils/documentScanner';
 
 function UploadPage() {
   const navigate = useNavigate();
@@ -26,6 +27,8 @@ function UploadPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [compressing, setCompressing] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanPreset, setScanPreset] = useState('document'); // 스캔 프리셋
   const [users, setUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState('');
   
@@ -121,10 +124,22 @@ function UploadPage() {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
       setCompressing(true);
+      setScanning(true);
       setError(null);
 
       try {
-        const compressedFile = await compressImage(selectedFile);
+        // 1단계: 문서 스캔 (품질 향상)
+        console.log('📄 문서 스캔 시작:', scanPreset);
+        const scannedBlob = await scanDocument(selectedFile, SCAN_PRESETS[scanPreset]);
+        const scannedFile = new File([scannedBlob], selectedFile.name, {
+          type: 'image/jpeg',
+          lastModified: Date.now(),
+        });
+        
+        setScanning(false);
+        
+        // 2단계: 추가 압축 (크기 제한)
+        const compressedFile = await compressImage(scannedFile);
         setFile(compressedFile);
 
         const reader = new FileReader();
@@ -137,6 +152,7 @@ function UploadPage() {
         setError('이미지 처리에 실패했습니다.');
       } finally {
         setCompressing(false);
+        setScanning(false);
       }
     }
   };
@@ -250,6 +266,28 @@ function UploadPage() {
               </option>
             ))}
           </select>
+        </div>
+
+        {/* 스캔 품질 선택 */}
+        <div className="form-section">
+          <label className="form-label">
+            <span className="label-icon">📄</span>
+            스캔 품질
+          </label>
+          <select
+            className="form-select"
+            value={scanPreset}
+            onChange={(e) => setScanPreset(e.target.value)}
+            disabled={uploading || compressing}
+          >
+            <option value="document">📋 일반 문서 (흑백, 고대비)</option>
+            <option value="color">🎨 컬러 문서 (색상 보존)</option>
+            <option value="highContrast">🔍 고대비 (흐린 문서)</option>
+            <option value="original">📷 원본 유지 (압축만)</option>
+          </select>
+          <p className={`form-hint ${scanning ? 'scanning' : ''}`}>
+            {scanning ? '🔄 문서 스캔 중...' : '📸 촬영 시 자동으로 문서 품질로 변환됩니다'}
+          </p>
         </div>
 
         {/* 미리보기 영역 */}
@@ -472,6 +510,26 @@ function UploadPage() {
         .form-select:disabled {
           background: #f5f5f5;
           cursor: not-allowed;
+        }
+
+        .form-hint {
+          margin-top: 8px;
+          font-size: 14px;
+          color: #666;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .form-hint.scanning {
+          color: #667eea;
+          font-weight: 600;
+          animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
         }
 
         .preview-section {
