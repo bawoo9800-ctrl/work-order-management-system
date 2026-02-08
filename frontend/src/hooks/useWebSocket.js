@@ -84,6 +84,15 @@ export const useWebSocket = () => {
         received: new Date().toISOString()
       }, ...prev]);
 
+      // 작업지시서 업데이트 이벤트 발생 (HomePage가 목록 갱신하도록)
+      window.dispatchEvent(new CustomEvent('workOrderUpdate', {
+        detail: {
+          type: data.type,
+          workOrderId: data.workOrderId,
+          data: data
+        }
+      }));
+
       // 브라우저 알림 표시 (iOS Safari 호환)
       if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
         try {

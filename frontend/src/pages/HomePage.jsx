@@ -74,6 +74,23 @@ const HomePage = () => {
     return () => window.removeEventListener('openWorkOrder', handleOpenWorkOrder);
   }, [workOrders]);
   
+  // WebSocket 알림 받으면 목록 자동 갱신
+  useEffect(() => {
+    const handleWorkOrderUpdate = (event) => {
+      const { type } = event.detail;
+      console.log('🔔 작업지시서 업데이트 알림:', type);
+      
+      // 작업지시서 생성/수정/삭제 시 목록 갱신
+      if (['work_order_created', 'work_order_updated', 'work_order_deleted'].includes(type)) {
+        console.log('🔄 작업지시서 목록 자동 갱신');
+        fetchWorkOrdersByDate(selectedDate, selectedClient?.id);
+      }
+    };
+    
+    window.addEventListener('workOrderUpdate', handleWorkOrderUpdate);
+    return () => window.removeEventListener('workOrderUpdate', handleWorkOrderUpdate);
+  }, [selectedDate, selectedClient]);
+  
   // 작업지시서 모달 열기 함수
   const openWorkOrderModal = async (workOrderId) => {
     try {
