@@ -80,11 +80,15 @@ const HomePage = () => {
       const { type } = event.detail;
       console.log('🔔 작업지시서 업데이트 알림:', type);
       
-      // 작업지시서 생성/수정/삭제 시 목록 갱신
-      if (['work_order_created', 'work_order_updated', 'work_order_deleted'].includes(type)) {
+      // 작업지시서 생성 시에만 목록 갱신
+      if (type === 'work_order_created') {
         console.log('🔄 작업지시서 목록 자동 갱신');
         fetchWorkOrdersByDate(selectedDate, selectedClient?.id);
       }
+      
+      // 수정/삭제는 비활성화 (차후 필요 시 활성화)
+      // if (type === 'work_order_updated') { ... }
+      // if (type === 'work_order_deleted') { ... }
     };
     
     window.addEventListener('workOrderUpdate', handleWorkOrderUpdate);
