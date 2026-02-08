@@ -8,6 +8,16 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="mobile-web-app-capable" content="yes" />
     <title>작업지시서 관리</title>
+    
+    <!-- Eruda 모바일 콘솔 (디버깅용) -->
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>
+      // 모바일에서만 eruda 활성화
+      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        eruda.init();
+        console.log('📱 Eruda 모바일 콘솔 활성화');
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
