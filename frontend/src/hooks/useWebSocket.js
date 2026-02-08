@@ -19,8 +19,17 @@ export const useWebSocket = () => {
   const [connected, setConnected] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const socketRef = useRef(null);
+  
+  // iOS 감지
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   useEffect(() => {
+    // iOS에서는 WebSocket 비활성화
+    if (isIOS) {
+      console.log('⚠️ iOS 감지: WebSocket 비활성화');
+      return;
+    }
+
     console.log('🔌 WebSocket 연결 시작:', SOCKET_URL);
 
     // Socket.IO 클라이언트 생성

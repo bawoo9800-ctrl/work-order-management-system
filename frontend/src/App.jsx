@@ -20,6 +20,9 @@ function AppContent() {
   const navigate = useNavigate();
   const [healthStatus, setHealthStatus] = useState(null);
   const isUploadPage = location.pathname === '/upload';
+  
+  // iOS 감지
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   // 모바일 감지 및 자동 리다이렉트 (최초 1회만)
   useEffect(() => {
@@ -52,8 +55,8 @@ function AppContent() {
 
   return (
     <div className="app">
-      {/* 알림 핸들러 */}
-      <NotificationHandler />
+      {/* 알림 핸들러 - iOS에서는 비활성화 */}
+      {!isIOS && <NotificationHandler />}
       
       {/* Header - 업로드 페이지에서는 숨김 */}
       {!isUploadPage && (
