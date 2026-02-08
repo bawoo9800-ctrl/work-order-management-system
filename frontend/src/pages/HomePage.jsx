@@ -10,9 +10,11 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { workOrderAPI, clientAPI } from '../services/api';
 
 const HomePage = () => {
+  const location = useLocation();
   const [workOrders, setWorkOrders] = useState([]);
   const [clients, setClients] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,6 +52,58 @@ const HomePage = () => {
     fetchWorkOrdersByDate(selectedDate);
     fetchClients();
   }, []);
+  
+  // 라우터 state에서 작업지시서 ID 받아서 모달 열기
+  useEffect(() => {
+    if (location.state?.openWorkOrder) {
+      const workOrderId = location.state.openWorkOrder;
+      console.log('📋 라우터에서 작업지시서 열기:', workOrderId);
+      openWorkOrderModal(workOrderId);
+    }
+  }, [location.state]);
+  
+  // 커스텀 이벤트로 작업지시서 모달 열기
+  useEffect(() => {
+    const handleOpenWorkOrder = (event) => {
+      const { workOrderId } = event.detail;
+      console.log('📋 이벤트에서 작업지시서 열기:', workOrderId);
+      openWorkOrderModal(workOrderId);
+    };
+    
+    window.addEventListener('openWorkOrder', handleOpenWorkOrder);
+    return () => window.removeEventListener('openWorkOrder', handleOpenWorkOrder);
+  }, [workOrders]);
+  
+  // 작업지시서 모달 열기 함수
+  const openWorkOrderModal = async (workOrderId) => {
+    try {
+      // 작업지시서 찾기
+      let order = workOrders.find(o => o.id === workOrderId);
+      
+      // 목록에 없으면 API로 가져오기
+      if (!order) {
+        console.log('📥 작업지시서 API 조회:', workOrderId);
+        const response = await workOrderAPI.getById(workOrderId);
+        order = response.data?.workOrder || response.workOrder;
+      }
+      
+      if (order) {
+        console.log('✅ 작업지시서 모달 열기:', order);
+        setZoomedOrder(order);
+        setZoomedImage(order.storage_path);
+        setModalForm({
+          work_type: order.work_type || '',
+          client_name: order.client_name || '',
+          site_name: order.site_name || '',
+          memo: order.memo || ''
+        });
+      } else {
+        console.error('❌ 작업지시서를 찾을 수 없습니다:', workOrderId);
+      }
+    } catch (error) {
+      console.error('❌ 작업지시서 조회 실패:', error);
+    }
+  };
   
   // 선택한 날짜의 작업지시서 조회
   const fetchWorkOrdersByDate = async (date, clientId = null) => {

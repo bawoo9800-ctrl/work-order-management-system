@@ -9,9 +9,11 @@
 
 import { useEffect } from 'react';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { useNavigate } from 'react-router-dom';
 
 const NotificationHandler = () => {
   const { connected, notifications, removeNotification } = useWebSocket();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // 브라우저 알림 권한 요청 (iOS Safari는 지원하지 않음)
@@ -38,6 +40,31 @@ const NotificationHandler = () => {
       console.log('🔕 WebSocket 연결 해제: 실시간 알림 비활성화');
     }
   }, [connected]);
+
+  // 알림 클릭 핸들러
+  const handleNotificationClick = (notification) => {
+    // 작업지시서 ID 추출
+    const workOrderId = notification.workOrderId || notification.data?.workOrderId;
+    
+    if (workOrderId) {
+      console.log('📋 작업지시서 모달 열기:', workOrderId);
+      
+      // 홈페이지로 이동하면서 작업지시서 ID 전달
+      navigate('/', { 
+        state: { 
+          openWorkOrder: workOrderId 
+        } 
+      });
+      
+      // 또는 커스텀 이벤트로 HomePage에 알림
+      window.dispatchEvent(new CustomEvent('openWorkOrder', { 
+        detail: { workOrderId } 
+      }));
+    }
+    
+    // 알림 제거
+    removeNotification(notification.id);
+  };
 
   // 알림 UI 렌더링
   return (
@@ -80,7 +107,7 @@ const NotificationHandler = () => {
             minWidth: '300px',
             cursor: 'pointer'
           }}
-          onClick={() => removeNotification(notification.id)}
+          onClick={() => handleNotificationClick(notification)}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ flex: 1 }}>
