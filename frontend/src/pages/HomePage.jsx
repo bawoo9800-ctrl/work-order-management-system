@@ -1,11 +1,9 @@
 /**
  * ========================================
- * 홈 페이지 (Dashboard)
+ * 홈 페이지 (작업지시서 대시보드)
  * ========================================
  * 파일: src/pages/HomePage.jsx
- * 설명: 당일 작업지시서 카드형 대시보드 + 좌측 거래처 리스트
- *       - 중고차 사이트 스타일 디자인
- *       - 깔끔한 흰색 배경, 미니멀 카드
+ * 설명: 작업지시서 그리드 + 상단 검색/필터
  * ========================================
  */
 
@@ -19,43 +17,36 @@ const HomePage = () => {
   const [workOrders, setWorkOrders] = useState([]);
   const [clients, setClients] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedClient, setSelectedClient] = useState(null);
   const [loading, setLoading] = useState(false);
   
-  // 🆕 고급 검색/필터 상태
+  // 고급 필터
   const [filters, setFilters] = useState({
-    workType: '',        // 작업 유형
-    siteName: '',        // 현장명
-    memo: '',           // 메모 검색
-    startDate: '',      // 시작 날짜
-    endDate: '',        // 종료 날짜
+    workType: '',
+    siteName: '',
+    memo: '',
+    startDate: '',
+    endDate: '',
   });
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [editingCard, setEditingCard] = useState(null);
-  const [editForm, setEditForm] = useState({ client_name: '', site_name: '' });
+  
+  // 이미지 갤러리
   const [zoomedImage, setZoomedImage] = useState(null);
   const [zoomedOrder, setZoomedOrder] = useState(null);
-  const [modalForm, setModalForm] = useState({
-    work_type: '',
-    client_name: '',
-    site_name: '',
-    memo: ''
-  });
+  
+  // 자동완성
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [filteredClientNames, setFilteredClientNames] = useState([]);
-  const [imageCache, setImageCache] = useState(new Map());
-  const [showCalendar, setShowCalendar] = useState(false);
   
-  // 한국 시간대로 오늘 날짜 가져오기 (YYYY-MM-DD)
+  const [imageCache, setImageCache] = useState(new Map());
+  
+  // 한국 시간대로 오늘 날짜
   const getKoreanDate = () => {
     const now = new Date();
-    const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // UTC+9
+    const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
     return koreaTime.toISOString().split('T')[0];
   };
   
   const [selectedDate, setSelectedDate] = useState(getKoreanDate());
-  
-  // 오늘 날짜 (YYYY-MM-DD)
   const today = getKoreanDate();
   
   // 초기 데이터 로딩
@@ -64,164 +55,79 @@ const HomePage = () => {
     fetchClients();
   }, []);
   
-  // 라우터 state에서 작업지시서 ID 받아서 모달 열기
-  useEffect(() => {
-    if (location.state?.openWorkOrder) {
-      const workOrderId = location.state.openWorkOrder;
-      console.log('📋 라우터에서 작업지시서 열기:', workOrderId);
-      openWorkOrderModal(workOrderId);
-    }
-  }, [location.state]);
-  
-  // 커스텀 이벤트로 작업지시서 모달 열기
-  useEffect(() => {
-    const handleOpenWorkOrder = (event) => {
-      const { workOrderId } = event.detail;
-      console.log('📋 이벤트에서 작업지시서 열기:', workOrderId);
-      openWorkOrderModal(workOrderId);
-    };
-    
-    window.addEventListener('openWorkOrder', handleOpenWorkOrder);
-    return () => window.removeEventListener('openWorkOrder', handleOpenWorkOrder);
-  }, [workOrders]);
-  
-  // WebSocket 알림 받으면 목록 자동 갱신
+  // WebSocket 알림 처리
   useEffect(() => {
     const handleWorkOrderUpdate = (event) => {
       const { type } = event.detail;
-      console.log('🔔 작업지시서 업데이트 알림:', type);
-      
-      // 작업지시서 생성 시에만 목록 갱신
       if (type === 'work_order_created') {
-        console.log('🔄 작업지시서 목록 자동 갱신');
-        fetchWorkOrdersByDate(selectedDate, selectedClient?.id);
+        fetchWorkOrdersByDate(selectedDate);
       }
-      
-      // 수정/삭제는 비활성화 (차후 필요 시 활성화)
-      // if (type === 'work_order_updated') { ... }
-      // if (type === 'work_order_deleted') { ... }
     };
     
     window.addEventListener('workOrderUpdate', handleWorkOrderUpdate);
     return () => window.removeEventListener('workOrderUpdate', handleWorkOrderUpdate);
-  }, [selectedDate, selectedClient]);
+  }, [selectedDate]);
   
-  // 작업지시서 모달 열기 함수
-  const openWorkOrderModal = async (workOrderId) => {
+  // 작업지시서 조회
+  const fetchWorkOrdersByDate = async (date) => {
     try {
-      // 작업지시서 찾기
-      let order = workOrders.find(o => o.id === workOrderId);
+      setLoading(true);
+      const startDate = date;
+      const endDate = date;
       
-      // 목록에 없으면 API로 가져오기
-      if (!order) {
-        console.log('📥 작업지시서 API 조회:', workOrderId);
-        const response = await workOrderAPI.getById(workOrderId);
-        order = response.data?.workOrder || response.workOrder;
-      }
-      
-      if (order) {
-        console.log('✅ 작업지시서 모달 열기:', order);
-        setZoomedOrder(order);
-        setZoomedImage(order.storage_path);
-        setModalForm({
-          work_type: order.work_type || '',
-          client_name: order.client_name || '',
-          site_name: order.site_name || '',
-          memo: order.memo || ''
-        });
-      } else {
-        console.error('❌ 작업지시서를 찾을 수 없습니다:', workOrderId);
-      }
-    } catch (error) {
-      console.error('❌ 작업지시서 조회 실패:', error);
-    }
-  };
-  
-  // 선택한 날짜의 작업지시서 조회
-  const fetchWorkOrdersByDate = async (date, clientId = null) => {
-    setLoading(true);
-    try {
-      const params = {
-        startDate: date,
-        endDate: date,
-      };
-      
-      if (clientId) {
-        params.clientId = clientId;
-      }
-      
+      const params = { startDate, endDate };
       const response = await workOrderAPI.list(params);
+      
       const orders = response.data?.workOrders || response.workOrders || [];
       setWorkOrders(orders);
-      
-      console.log('📋 Fetched work orders:', orders.length);
-      console.log('📋 First order work_type:', orders[0]?.work_type);
-      console.log('📋 Sample orders:', orders.slice(0, 3).map(o => ({
-        id: o.id,
-        work_type: o.work_type,
-        client_name: o.client_name
-      })));
+      console.log(`📋 ${date} 작업지시서:`, orders.length);
     } catch (error) {
-      console.error('❌ 작업지시서 조회 실패:', error);
+      console.error('❌ 작업지시서 로드 실패:', error);
     } finally {
       setLoading(false);
     }
-  };
-  
-  // 당일 작업지시서 조회 (backward compatibility)
-  const fetchTodayWorkOrders = async (clientId = null) => {
-    await fetchWorkOrdersByDate(selectedDate, clientId);
   };
   
   // 거래처 목록 조회
   const fetchClients = async () => {
     try {
       const response = await clientAPI.list();
-      const clientsData = response.data?.clients || response.clients || [];
-      setClients(clientsData);
-      
-      console.log('👥 거래처 목록:', clientsData);
+      const clientData = response.data?.clients || response.clients || [];
+      setClients(clientData);
     } catch (error) {
-      console.error('❌ 거래처 목록 조회 실패:', error);
+      console.error('❌ 거래처 로드 실패:', error);
     }
   };
   
-  // 거래처 검색
-  const filteredClients = clients.filter(client => {
-    if (!client || !client.name) return false;
-    return client.name.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  // 작업 유형 목록 (중복 제거)
+  const workTypes = [...new Set(workOrders.map(o => o.work_type).filter(Boolean))];
   
-  // 🆕 고급 필터 적용
+  // 필터링된 작업지시서
   const filteredWorkOrders = workOrders.filter(order => {
+    // 거래처 검색
+    if (searchQuery && !order.client_name?.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    
     // 작업 유형 필터
     if (filters.workType && order.work_type !== filters.workType) {
       return false;
     }
     
     // 현장명 검색
-    if (filters.siteName) {
-      const siteName = order.site_name || '';
-      if (!siteName.toLowerCase().includes(filters.siteName.toLowerCase())) {
-        return false;
-      }
+    if (filters.siteName && !order.site_name?.toLowerCase().includes(filters.siteName.toLowerCase())) {
+      return false;
     }
     
     // 메모 검색
-    if (filters.memo) {
-      const memo = order.memo || '';
-      if (!memo.toLowerCase().includes(filters.memo.toLowerCase())) {
-        return false;
-      }
+    if (filters.memo && !order.memo?.toLowerCase().includes(filters.memo.toLowerCase())) {
+      return false;
     }
     
     return true;
   });
   
-  // 🆕 작업 유형 목록 추출 (중복 제거)
-  const workTypes = [...new Set(workOrders.map(order => order.work_type).filter(Boolean))];
-  
-  // 🆕 필터 초기화
+  // 필터 초기화
   const handleResetFilters = () => {
     setFilters({
       workType: '',
@@ -230,247 +136,41 @@ const HomePage = () => {
       startDate: '',
       endDate: '',
     });
-    setSelectedDate(getKoreanDate());
-    setSelectedClient(null);
-    fetchWorkOrdersByDate(getKoreanDate());
+    setSearchQuery('');
   };
   
-  // 🆕 기간별 조회
-  const handleDateRangeSearch = async () => {
-    if (!filters.startDate || !filters.endDate) {
-      alert('시작일과 종료일을 모두 선택해주세요.');
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      const params = {
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-      };
-      
-      if (selectedClient?.id) {
-        params.clientId = selectedClient.id;
-      }
-      
-      const response = await workOrderAPI.list(params);
-      const orders = response.data?.workOrders || response.workOrders || [];
-      setWorkOrders(orders);
-      
-      console.log('📅 기간별 조회:', filters.startDate, '~', filters.endDate, '결과:', orders.length);
-    } catch (error) {
-      console.error('❌ 기간별 조회 실패:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // 거래처 선택
-  const handleClientClick = (client) => {
-    if (selectedClient?.id === client?.id) {
-      setSelectedClient(null);
-      fetchTodayWorkOrders();
-    } else {
-      setSelectedClient(client);
-      fetchTodayWorkOrders(client?.id);
-    }
-  };
-  
-  // 거래처별 작업지시서 개수 계산 (필터 적용)
-  const getClientOrderCount = (clientId, clientName) => {
-    return filteredWorkOrders.filter(order => {
-      // client_id로 매칭하거나 client_name으로 매칭
-      if (clientId && order.client_id === clientId) {
-        return true;
-      }
-      if (clientName && order.client_name === clientName) {
-        return true;
-      }
-      return false;
-    }).length;
-  };
-  
-  // 카드 수정
-  const handleEditStart = (order) => {
-    setEditingCard(order.id);
-    setEditForm({
-      client_name: order.client_name || '',
-      site_name: order.site_name || '',
-    });
-    setShowAutocomplete(false);
-  };
-  
-  // 거래처명 입력 시 자동완성
-  const handleClientNameChange = (e) => {
-    const value = e.target.value;
-    setEditForm({ ...editForm, client_name: value });
-    
-    if (value.trim()) {
-      const filtered = clients
-        .filter(client => client.name && client.name.toLowerCase().includes(value.toLowerCase()))
-        .slice(0, 5); // 최대 5개만 표시
-      setFilteredClientNames(filtered);
-      setShowAutocomplete(filtered.length > 0);
-    } else {
-      setShowAutocomplete(false);
-    }
-  };
-  
-  // 자동완성 선택
-  const handleSelectClient = (clientName) => {
-    setEditForm({ ...editForm, client_name: clientName });
-    setShowAutocomplete(false);
-  };
-  
-  const handleEditSave = async (orderId) => {
-    try {
-      await workOrderAPI.update(orderId, editForm);
-      
-      // 로컬 상태 업데이트
-      setWorkOrders(workOrders.map(order => 
-        order.id === orderId ? { ...order, ...editForm } : order
-      ));
-      setEditingCard(null);
-      
-      // 서버에서 최신 데이터 다시 가져오기
-      await fetchTodayWorkOrders(selectedClient?.id);
-      
-      console.log('✅ 수정 완료:', editForm);
-    } catch (error) {
-      console.error('❌ 수정 실패:', error);
-      alert('수정에 실패했습니다.');
-    }
-  };
-  
-  const handleEditCancel = () => {
-    setEditingCard(null);
-    setEditForm({ client_name: '', site_name: '' });
-  };
-  
-  // 카드 삭제
-  const handleDelete = async (orderId) => {
-    if (!window.confirm('정말로 이 작업지시서를 삭제하시겠습니까?')) {
-      return;
-    }
-    
-    try {
-      await workOrderAPI.delete(orderId);
-      
-      // 로컬 상태에서 제거
-      setWorkOrders(workOrders.filter(order => order.id !== orderId));
-      
-      console.log('✅ 삭제 완료:', orderId);
-    } catch (error) {
-      console.error('❌ 삭제 실패:', error);
-      alert('삭제에 실패했습니다.');
-    }
-  };
-  
-  // 이미지 확대
-  const handleImageZoom = (order) => {
-    console.log('🔍 Opening modal with order:', order);
-    console.log('📋 work_type:', order.work_type);
-    console.log('📝 memo:', order.memo);
-    
-    setZoomedImage(getImageUrl(order));
-    setZoomedOrder(order);
-    setModalForm({
-      work_type: order.work_type || '',
-      client_name: order.client_name || '',
-      site_name: order.site_name || '',
-      memo: order.memo || ''
-    });
-    
-    console.log('✅ Modal form set:', {
-      work_type: order.work_type || '',
-      client_name: order.client_name || '',
-      site_name: order.site_name || '',
-      memo: order.memo || ''
-    });
-  };
-  
-  const closeImageZoom = () => {
-    setZoomedImage(null);
-    setZoomedOrder(null);
-    setModalForm({
-      work_type: '',
-      client_name: '',
-      site_name: '',
-      memo: ''
-    });
-    setShowAutocomplete(false);
-  };
-  
-  // 날짜 선택 핸들러
-  const handleDateSelect = async (date) => {
-    setSelectedDate(date);
-    setShowCalendar(false);
-    await fetchWorkOrdersByDate(date, selectedClient?.id);
+  // 날짜 변경
+  const handleDateChange = (newDate) => {
+    setSelectedDate(newDate);
+    fetchWorkOrdersByDate(newDate);
   };
   
   // 오늘로 이동
-  const handleTodayClick = async () => {
-    setSelectedDate(today);
-    setShowCalendar(false);
-    await fetchWorkOrdersByDate(today, selectedClient?.id);
+  const handleTodayClick = () => {
+    handleDateChange(today);
   };
   
-  // 모달 거래처명 자동완성
-  const handleModalClientNameChange = (e) => {
-    const value = e.target.value;
-    setModalForm({ ...modalForm, client_name: value });
-    
-    if (value.trim()) {
-      const filtered = clients
-        .filter(client => client.name && client.name.toLowerCase().includes(value.toLowerCase()))
-        .slice(0, 5);
-      setFilteredClientNames(filtered);
-      setShowAutocomplete(filtered.length > 0);
-    } else {
-      setShowAutocomplete(false);
-    }
+  // 이미지 클릭
+  const handleImageClick = (order) => {
+    const imageUrl = getImageUrl(order);
+    setZoomedImage(imageUrl);
+    setZoomedOrder(order);
   };
   
-  // 모달 자동완성 선택
-  const handleModalSelectClient = (clientName) => {
-    setModalForm({ ...modalForm, client_name: clientName });
-    setShowAutocomplete(false);
+  // 이미지 갤러리 닫기
+  const closeImageZoom = () => {
+    setZoomedImage(null);
+    setZoomedOrder(null);
   };
   
-  // 모달에서 저장
-  const handleModalSave = async () => {
-    if (!zoomedOrder) return;
-    
-    console.log('💾 Saving modal form:', modalForm);
-    
-    try {
-      await workOrderAPI.update(zoomedOrder.id, modalForm);
-      
-      console.log('✅ Save successful');
-      alert('저장되었습니다.');
-      
-      // 서버에서 최신 데이터 다시 가져오기
-      console.log('🔄 Fetching latest data...');
-      await fetchTodayWorkOrders(selectedClient?.id);
-      console.log('✅ Data refreshed');
-      
-      // 모달 닫기 (데이터 새로고침 후)
-      closeImageZoom();
-    } catch (error) {
-      console.error('❌ 저장 실패:', error);
-      alert('저장에 실패했습니다.');
-    }
-  };
-  
-  // 이미지 URL 생성 (메모이제이션)
+  // 이미지 URL 생성
   const getImageUrl = (workOrder) => {
-    const cacheKey = workOrder.id;
-    if (imageCache.has(cacheKey)) {
-      return imageCache.get(cacheKey);
+    if (imageCache.has(workOrder.id)) {
+      return imageCache.get(workOrder.id);
     }
     
     const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-    const storagePath = workOrder.storage_path || '';
+    const storagePath = workOrder.storage_path;
     
     let url;
     if (storagePath.startsWith('/uploads/')) {
@@ -479,114 +179,82 @@ const HomePage = () => {
       url = `${baseUrl}/uploads/${storagePath}`;
     }
     
-    setImageCache(new Map(imageCache.set(cacheKey, url)));
+    setImageCache(new Map(imageCache.set(workOrder.id, url)));
     return url;
   };
   
-  // 시간 포맷팅
-  const formatTime = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('ko-KR', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+  // 작업지시서 업데이트
+  const handleUpdateWorkOrder = async (id, data) => {
+    try {
+      await workOrderAPI.update(id, data);
+      await fetchWorkOrdersByDate(selectedDate);
+    } catch (error) {
+      console.error('❌ 작업지시서 업데이트 실패:', error);
+    }
   };
-  
+
   return (
     <>
-      <div className="dashboard-container">
-      {/* 좌측 사이드바 - 거래처 리스트 */}
-      <aside className="sidebar">
-        <div className="sidebar-header">
-          <h2>거래처 목록</h2>
-        </div>
-        
-        {/* 검색 필드 */}
-        <div className="search-box">
-          <input
-            type="text"
-            placeholder="거래처 검색..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
-          />
-        </div>
-        
-        {/* 전체 보기 버튼 */}
-        <div 
-          className={`client-item ${!selectedClient ? 'active' : ''}`}
-          onClick={() => handleClientClick(null)}
-        >
-          <span className="client-name">전체 보기</span>
-          <span className="client-count">{filteredWorkOrders.length}</span>
-        </div>
-        
-        {/* 거래처 목록 */}
-        <div className="client-list">
-          {filteredClients.length === 0 ? (
-            <div className="empty-list">
-              <p>검색 결과가 없습니다.</p>
+      <div className="homepage-container">
+        {/* 상단 헤더 + 검색 */}
+        <div className="page-header">
+          <div className="header-top">
+            <div>
+              <h1>작업지시서</h1>
+              <p className="subtitle">
+                {new Date(selectedDate + 'T00:00:00').toLocaleDateString('ko-KR', { 
+                  year: 'numeric',
+                  month: 'long', 
+                  day: 'numeric',
+                  weekday: 'long'
+                })}
+              </p>
             </div>
-          ) : (
-            filteredClients.map((client) => {
-              const count = getClientOrderCount(client.id, client.name);
-              return (
-                <div
-                  key={client.id}
-                  className={`client-item ${selectedClient?.id === client.id ? 'active' : ''}`}
-                  onClick={() => handleClientClick(client)}
+            <div className="header-actions">
+              <input
+                type="date"
+                className="date-input"
+                value={selectedDate}
+                onChange={(e) => handleDateChange(e.target.value)}
+              />
+              {selectedDate !== today && (
+                <button className="btn-today" onClick={handleTodayClick}>
+                  오늘로 이동
+                </button>
+              )}
+            </div>
+          </div>
+          
+          {/* 거래처 검색 */}
+          <div className="search-section">
+            <div className="search-box">
+              <input
+                type="text"
+                className="search-input"
+                placeholder="🔍 거래처 검색... (예: 삼성, 현대)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button 
+                  className="clear-btn"
+                  onClick={() => setSearchQuery('')}
                 >
-                  <span className="client-name">{client.name}</span>
-                  {count > 0 && (
-                    <span className="client-count">{count}</span>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
-      </aside>
-
-      {/* 메인 컨텐츠 */}
-      <main className="dashboard-main">
-        <div className="dashboard-header">
-          <div>
-            <h1>작업지시서</h1>
-            <p className="subtitle">{new Date(selectedDate + 'T00:00:00').toLocaleDateString('ko-KR', { 
-              year: 'numeric',
-              month: 'long', 
-              day: 'numeric',
-              weekday: 'long'
-            })}</p>
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
-          <div className="date-actions">
-            <button 
-              className="btn-date-picker"
-              onClick={() => setShowCalendar(true)}
-            >
-              📅 날짜 선택
-            </button>
-            {selectedDate !== today && (
-              <button 
-                className="btn-today"
-                onClick={handleTodayClick}
-              >
-                오늘로 이동
-              </button>
-            )}
-          </div>
-        </div>
-        
-        {/* 🆕 고급 검색/필터 섹션 */}
-        <div className="filters-section">
-          <div className="filters-header">
+          
+          {/* 고급 필터 토글 */}
+          <div className="filters-toggle">
             <button 
               className="btn-toggle-filters"
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
             >
               🔍 고급 검색/필터 {showAdvancedFilters ? '▲' : '▼'}
             </button>
-            {(filters.workType || filters.siteName || filters.memo || filters.startDate) && (
+            {(filters.workType || filters.siteName || filters.memo) && (
               <button 
                 className="btn-reset-filters"
                 onClick={handleResetFilters}
@@ -599,17 +267,14 @@ const HomePage = () => {
             </div>
           </div>
           
+          {/* 고급 필터 패널 */}
           {showAdvancedFilters && (
-            <div className="filters-content">
+            <div className="filters-panel">
               <div className="filters-grid">
-                {/* 작업 유형 필터 */}
+                {/* 작업 유형 */}
                 <div className="filter-item">
-                  <label className="filter-label">
-                    <span className="filter-icon">🔧</span>
-                    작업 유형
-                  </label>
+                  <label>🔧 작업 유형</label>
                   <select
-                    className="filter-select"
                     value={filters.workType}
                     onChange={(e) => setFilters({ ...filters, workType: e.target.value })}
                   >
@@ -620,453 +285,159 @@ const HomePage = () => {
                   </select>
                 </div>
                 
-                {/* 현장명 검색 */}
+                {/* 현장명 */}
                 <div className="filter-item">
-                  <label className="filter-label">
-                    <span className="filter-icon">🏗️</span>
-                    현장명 검색
-                  </label>
+                  <label>🏗️ 현장명</label>
                   <input
                     type="text"
-                    className="filter-input"
-                    placeholder="현장명을 입력하세요..."
+                    placeholder="현장명 검색..."
                     value={filters.siteName}
                     onChange={(e) => setFilters({ ...filters, siteName: e.target.value })}
                   />
                 </div>
                 
-                {/* 메모 검색 */}
+                {/* 메모 */}
                 <div className="filter-item">
-                  <label className="filter-label">
-                    <span className="filter-icon">📝</span>
-                    메모 검색
-                  </label>
+                  <label>📝 메모</label>
                   <input
                     type="text"
-                    className="filter-input"
-                    placeholder="메모 내용을 입력하세요..."
+                    placeholder="메모 검색..."
                     value={filters.memo}
                     onChange={(e) => setFilters({ ...filters, memo: e.target.value })}
                   />
                 </div>
               </div>
-              
-              {/* 기간별 조회 */}
-              <div className="date-range-section">
-                <label className="filter-label">
-                  <span className="filter-icon">📅</span>
-                  기간별 조회
-                </label>
-                <div className="date-range-inputs">
-                  <input
-                    type="date"
-                    className="filter-date"
-                    value={filters.startDate}
-                    onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-                  />
-                  <span className="date-separator">~</span>
-                  <input
-                    type="date"
-                    className="filter-date"
-                    value={filters.endDate}
-                    onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-                  />
-                  <button 
-                    className="btn-date-search"
-                    onClick={handleDateRangeSearch}
-                    disabled={!filters.startDate || !filters.endDate}
-                  >
-                    🔍 조회
-                  </button>
-                </div>
-              </div>
-              
-              {/* 퀵 필터 버튼 */}
-              <div className="quick-filters">
-                <span className="quick-filters-label">빠른 기간 선택:</span>
-                <button 
-                  className="btn-quick-filter"
-                  onClick={() => {
-                    const today = getKoreanDate();
-                    setFilters({ ...filters, startDate: today, endDate: today });
-                  }}
-                >
-                  오늘
-                </button>
-                <button 
-                  className="btn-quick-filter"
-                  onClick={() => {
-                    const today = new Date();
-                    const yesterday = new Date(today);
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    const yesterdayStr = yesterday.toISOString().split('T')[0];
-                    setFilters({ ...filters, startDate: yesterdayStr, endDate: yesterdayStr });
-                  }}
-                >
-                  어제
-                </button>
-                <button 
-                  className="btn-quick-filter"
-                  onClick={() => {
-                    const today = new Date();
-                    const weekAgo = new Date(today);
-                    weekAgo.setDate(weekAgo.getDate() - 7);
-                    setFilters({ 
-                      ...filters, 
-                      startDate: weekAgo.toISOString().split('T')[0], 
-                      endDate: getKoreanDate() 
-                    });
-                  }}
-                >
-                  최근 7일
-                </button>
-                <button 
-                  className="btn-quick-filter"
-                  onClick={() => {
-                    const today = new Date();
-                    const monthAgo = new Date(today);
-                    monthAgo.setDate(monthAgo.getDate() - 30);
-                    setFilters({ 
-                      ...filters, 
-                      startDate: monthAgo.toISOString().split('T')[0], 
-                      endDate: getKoreanDate() 
-                    });
-                  }}
-                >
-                  최근 30일
-                </button>
-                <button 
-                  className="btn-quick-filter"
-                  onClick={() => {
-                    const today = new Date();
-                    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-                    setFilters({ 
-                      ...filters, 
-                      startDate: firstDay.toISOString().split('T')[0], 
-                      endDate: getKoreanDate() 
-                    });
-                  }}
-                >
-                  이번 달
-                </button>
-              </div>
             </div>
           )}
         </div>
         
-        {loading ? (
+        {/* 로딩 */}
+        {loading && (
           <div className="loading-container">
             <div className="spinner"></div>
-            <p>로딩 중...</p>
-          </div>
-        ) : filteredWorkOrders.length === 0 ? (
-          <div className="empty-dashboard">
-            <div className="empty-icon">📭</div>
-            <h2>검색 결과가 없습니다.</h2>
-            <p>필터 조건을 변경해보세요.</p>
-          </div>
-        ) : (
-          <div className="work-order-grid">
-            {filteredWorkOrders.map((order) => (
-              <div key={order.id} className="work-order-card">
-                {/* 이미지 */}
-                <div 
-                  className="card-image"
-                  onClick={() => handleImageZoom(order)}
-                >
-                  <img 
-                    src={getImageUrl(order)} 
-                    alt={order.original_filename}
-                    loading="lazy"
-                    decoding="async"
-                    onError={(e) => {
-                      e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="280"><rect width="200" height="280" fill="%23f5f5f5"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23999" font-size="14">이미지 없음</text></svg>';
-                    }}
-                  />
-                  {/* 클릭 힌트 */}
-                  <div className="click-hint">🔍 클릭하여 확대</div>
-                  
-                  {/* 작업 유형 배지 (이미지 위 좌측 상단) */}
-                  {order.work_type && (
-                    <div className={`work-type-badge ${order.work_type === 'FSD' ? 'fsd-badge' : order.work_type === 'SD' ? 'sd-badge' : 'other-badge'}`}>
-                      {order.work_type}
-                    </div>
-                  )}
-                  
-                  {/* 거래처명 배지 (이미지 위 우측 하단) */}
-                  {!editingCard && order.client_name && (
-                    <div className="client-badge">
-                      {order.client_name}
-                    </div>
-                  )}
-                </div>
-                
-                {/* 정보 영역 */}
-                <div className="card-info">
-                  {/* 거래처명 / 현장명 */}
-                  {editingCard === order.id ? (
-                    <>
-                      <div className="autocomplete-wrapper">
-                        <input
-                          type="text"
-                          className="edit-input"
-                          value={editForm.client_name}
-                          onChange={handleClientNameChange}
-                          onFocus={() => {
-                            if (editForm.client_name.trim() && filteredClientNames.length > 0) {
-                              setShowAutocomplete(true);
-                            }
-                          }}
-                          placeholder="거래처명"
-                        />
-                        {showAutocomplete && editingCard === order.id && (
-                          <ul className="autocomplete-list">
-                            {filteredClientNames.map((client) => (
-                              <li
-                                key={client.id}
-                                onClick={() => handleSelectClient(client.name)}
-                                className="autocomplete-item"
-                              >
-                                {client.name}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                      <input
-                        type="text"
-                        className="edit-input"
-                        value={editForm.site_name}
-                        onChange={(e) => setEditForm({ ...editForm, site_name: e.target.value })}
-                        placeholder="현장명"
-                      />
-                    </>
-                  ) : (
-                    <>
-                      {/* 시간 / 전송자 / 현장명 / 수정 버튼 한 줄 */}
-                      <div className="card-info-row">
-                        <span className="info-item">{formatTime(order.created_at)}</span>
-                        <span className="info-divider">•</span>
-                        <span className="info-item">{order.uploaded_by || '전송자 미상'}</span>
-                        <span className="info-divider">•</span>
-                        <span className="info-item">{order.site_name || '현장명 없음'}</span>
-                        <button className="btn-edit-inline" onClick={() => handleEditStart(order)}>
-                          ✎
-                        </button>
-                        <button className="btn-delete-inline" onClick={() => handleDelete(order.id)}>
-                          🗑️
-                        </button>
-                      </div>
-                    </>
-                  )}
-                  
-                  {/* 수정 모드 버튼 */}
-                  {editingCard === order.id && (
-                    <div className="card-actions">
-                      <button className="btn-save" onClick={() => handleEditSave(order.id)}>
-                        ✓
-                      </button>
-                      <button className="btn-cancel" onClick={handleEditCancel}>
-                        ✕
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+            <p>작업지시서를 불러오는 중...</p>
           </div>
         )}
-      </main>
+        
+        {/* 작업지시서 그리드 */}
+        {!loading && (
+          <div className="work-order-grid">
+            {filteredWorkOrders.length === 0 ? (
+              <div className="empty-state">
+                <p>작업지시서가 없습니다.</p>
+              </div>
+            ) : (
+              filteredWorkOrders.map((order) => (
+                <div key={order.id} className="work-order-card">
+                  <div 
+                    className="card-image"
+                    onClick={() => handleImageClick(order)}
+                  >
+                    <img 
+                      src={getImageUrl(order)} 
+                      alt="작업지시서" 
+                      loading="lazy"
+                    />
+                    <div className="click-hint">클릭하여 확대</div>
+                  </div>
+                  
+                  <div className="card-info">
+                    <div className="card-row">
+                      <span className="card-label">거래처:</span>
+                      <span className="card-value">{order.client_name || '-'}</span>
+                    </div>
+                    <div className="card-row">
+                      <span className="card-label">현장:</span>
+                      <span className="card-value">{order.site_name || '-'}</span>
+                    </div>
+                    {order.work_type && (
+                      <div className="card-row">
+                        <span className="card-label">유형:</span>
+                        <span className="card-value">{order.work_type}</span>
+                      </div>
+                    )}
+                    {order.memo && (
+                      <div className="card-row">
+                        <span className="card-label">메모:</span>
+                        <span className="card-value card-memo">{order.memo}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
       
-      {/* 🆕 고급 이미지 갤러리 뷰어 */}
+      {/* 이미지 갤러리 */}
       {zoomedImage && zoomedOrder && (
         <ImageGalleryViewer
           images={[zoomedImage]}
           initialIndex={0}
           onClose={closeImageZoom}
           workOrder={zoomedOrder}
-          onUpdateWorkOrder={async (id, data) => {
-            await workOrderAPI.update(id, data);
-            await fetchTodayWorkOrders(selectedClient?.id);
-          }}
+          onUpdateWorkOrder={handleUpdateWorkOrder}
         />
       )}
       
       <style>{`
-        * {
-          box-sizing: border-box;
+        .homepage-container {
+          max-width: 1600px;
+          margin: 0 auto;
+          padding: 20px;
         }
         
-        .dashboard-container {
-          min-height: calc(100vh - 60px - 56px);
-          background: #f8f8f8;
-          padding: 0;
-          margin: 0;
-          display: flex;
-          width: 100%;
-          transform: translateZ(0);
-          -webkit-overflow-scrolling: touch;
+        /* ===== 페이지 헤더 ===== */
+        .page-header {
+          background: white;
+          border-radius: 12px;
+          padding: 24px;
+          margin-bottom: 30px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
         
-        /* ===== 좌측 사이드바 ===== */
-        .sidebar {
-          width: 280px;
-          background: #ffffff;
-          border-right: 1px solid #ddd;
-          display: flex;
-          flex-direction: column;
-          overflow-y: auto;
-          flex-shrink: 0;
-        }
-        
-        .sidebar-header {
-          padding: 24px 20px;
-          border-bottom: 1px solid #f0f0f0;
-        }
-        
-        .sidebar-header h2 {
-          font-size: 18px;
-          font-weight: 700;
-          color: #000;
-          margin: 0;
-        }
-        
-        .search-box {
-          padding: 16px 20px;
-          border-bottom: 1px solid #f0f0f0;
-        }
-        
-        .search-input {
-          width: 100%;
-          padding: 10px 12px;
-          border: 1px solid #ddd;
-          border-radius: 8px;
-          font-size: 14px;
-          outline: none;
-          transition: all 0.2s;
-        }
-        
-        .search-input:focus {
-          border-color: #000;
-          box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
-        }
-        
-        .client-list {
-          flex: 1;
-          overflow-y: auto;
-          padding: 8px 0;
-        }
-        
-        .client-item {
+        .header-top {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 12px 20px;
-          cursor: pointer;
-          transition: all 0.2s;
-          border-left: 3px solid transparent;
+          margin-bottom: 20px;
         }
         
-        .client-item:hover {
-          background: #f5f5f5;
-        }
-        
-        .client-item.active {
-          background: #f0f0f0;
-          border-left-color: #000;
-        }
-        
-        .client-name {
-          font-size: 14px;
-          font-weight: 500;
-          color: #333;
-          flex: 1;
-        }
-        
-        .client-item.active .client-name {
-          font-weight: 700;
-          color: #000;
-        }
-        
-        .client-count {
-          font-size: 13px;
-          font-weight: 600;
-          color: #666;
-          background: #f0f0f0;
-          padding: 2px 8px;
-          border-radius: 10px;
-        }
-        
-        .client-badge {
-          font-size: 10px;
-          color: #999;
-        }
-        
-        .client-item.active .client-badge {
-          color: #000;
-        }
-        
-        .empty-list {
-          padding: 40px 20px;
-          text-align: center;
-        }
-        
-        .empty-list p {
-          font-size: 14px;
-          color: #999;
-          margin: 0;
-        }
-        
-        /* ===== 메인 컨텐츠 ===== */
-        .dashboard-main {
-          flex: 1;
-          max-width: 100%;
-          padding: 40px 60px;
-          background: #f8f8f8;
-        }
-        
-        .dashboard-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 40px;
-        }
-        
-        .dashboard-header h1 {
+        .page-header h1 {
           margin: 0 0 8px 0;
-          color: #000;
-          font-size: 32px;
+          font-size: 28px;
           font-weight: 700;
-          letter-spacing: -0.5px;
+          color: #000;
         }
         
         .subtitle {
           margin: 0;
+          font-size: 14px;
           color: #666;
-          font-size: 15px;
-          font-weight: 400;
         }
         
-        /* ===== 🆕 고급 검색/필터 섹션 ===== */
-        .filters-section {
-          background: #ffffff;
-          border: 1px solid #ddd;
-          border-radius: 12px;
-          margin-bottom: 30px;
-          overflow: hidden;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-        }
-        
-        .filters-header {
+        .header-actions {
           display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 16px 20px;
-          background: #fafafa;
-          border-bottom: 1px solid #e5e5e5;
+          gap: 10px;
         }
         
-        .btn-toggle-filters {
+        .date-input {
+          padding: 10px 16px;
+          border: 2px solid #ddd;
+          border-radius: 8px;
+          font-size: 14px;
+          font-family: inherit;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        
+        .date-input:focus {
+          outline: none;
+          border-color: #000;
+        }
+        
+        .btn-today {
           padding: 10px 20px;
           background: #000;
           color: white;
@@ -1076,30 +447,96 @@ const HomePage = () => {
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
+        }
+        
+        .btn-today:hover {
+          background: #333;
+        }
+        
+        /* ===== 검색 섹션 ===== */
+        .search-section {
+          margin-bottom: 20px;
+        }
+        
+        .search-box {
+          position: relative;
+        }
+        
+        .search-input {
+          width: 100%;
+          padding: 14px 50px 14px 20px;
+          font-size: 16px;
+          border: 2px solid #ddd;
+          border-radius: 12px;
+          transition: all 0.2s;
+          font-family: inherit;
+        }
+        
+        .search-input:focus {
+          outline: none;
+          border-color: #000;
+          box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+        }
+        
+        .clear-btn {
+          position: absolute;
+          right: 15px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 30px;
+          height: 30px;
+          border: none;
+          background: #f0f0f0;
+          border-radius: 50%;
+          cursor: pointer;
+          font-size: 16px;
+          color: #666;
+          transition: all 0.2s;
+        }
+        
+        .clear-btn:hover {
+          background: #e0e0e0;
+          color: #000;
+        }
+        
+        /* ===== 필터 토글 ===== */
+        .filters-toggle {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 12px;
         }
         
-        .btn-toggle-filters:hover {
-          background: #333;
-          transform: translateY(-1px);
-        }
-        
-        .btn-reset-filters {
-          padding: 10px 16px;
-          background: #f44336;
-          color: white;
-          border: none;
+        .btn-toggle-filters {
+          padding: 10px 20px;
+          background: #f8f8f8;
+          border: 2px solid #e0e0e0;
           border-radius: 8px;
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
         }
         
+        .btn-toggle-filters:hover {
+          background: #f0f0f0;
+          border-color: #ccc;
+        }
+        
+        .btn-reset-filters {
+          padding: 10px 16px;
+          background: #fff;
+          border: 2px solid #ff4444;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          color: #ff4444;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        
         .btn-reset-filters:hover {
-          background: #d32f2f;
+          background: #ff4444;
+          color: white;
         }
         
         .filter-stats {
@@ -1107,182 +544,92 @@ const HomePage = () => {
           font-size: 14px;
           font-weight: 600;
           color: #666;
-          background: #f0f0f0;
-          padding: 8px 16px;
-          border-radius: 6px;
         }
         
-        .filters-content {
-          padding: 24px;
-          background: white;
+        /* ===== 고급 필터 패널 ===== */
+        .filters-panel {
+          margin-top: 20px;
+          padding: 20px;
+          background: #f8f8f8;
+          border-radius: 12px;
         }
         
         .filters-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-          gap: 20px;
-          margin-bottom: 24px;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 16px;
         }
         
-        .filter-item {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        
-        .filter-label {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          color: #333;
-        }
-        
-        .filter-icon {
-          font-size: 18px;
-        }
-        
-        .filter-select,
-        .filter-input {
-          padding: 12px 16px;
-          border: 2px solid #e0e0e0;
-          border-radius: 8px;
-          font-size: 14px;
-          background: white;
-          transition: all 0.2s;
-          outline: none;
-        }
-        
-        .filter-select:focus,
-        .filter-input:focus {
-          border-color: #000;
-          box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
-        }
-        
-        .date-range-section {
-          padding: 20px;
-          background: #f9f9f9;
-          border-radius: 8px;
-          border: 1px solid #e5e5e5;
-        }
-        
-        .date-range-inputs {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          flex-wrap: wrap;
-        }
-        
-        .filter-date {
-          padding: 12px 16px;
-          border: 2px solid #e0e0e0;
-          border-radius: 8px;
-          font-size: 14px;
-          background: white;
-          transition: all 0.2s;
-          outline: none;
-          flex: 1;
-          min-width: 180px;
-        }
-        
-        .filter-date:focus {
-          border-color: #000;
-          box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
-        }
-        
-        .date-separator {
-          font-weight: 600;
-          color: #999;
-          font-size: 16px;
-        }
-        
-        .btn-date-search {
-          padding: 12px 24px;
-          background: #4CAF50;
-          color: white;
-          border: none;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s;
-          white-space: nowrap;
-        }
-        
-        .btn-date-search:hover:not(:disabled) {
-          background: #45a049;
-          transform: translateY(-1px);
-        }
-        
-        .btn-date-search:disabled {
-          background: #ccc;
-          cursor: not-allowed;
-        }
-        
-        .quick-filters {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-top: 16px;
-          flex-wrap: wrap;
-        }
-        
-        .quick-filters-label {
+        .filter-item label {
+          display: block;
           font-size: 13px;
           font-weight: 600;
+          color: #333;
+          margin-bottom: 8px;
+        }
+        
+        .filter-item input,
+        .filter-item select {
+          width: 100%;
+          padding: 10px 14px;
+          border: 2px solid #ddd;
+          border-radius: 8px;
+          font-size: 14px;
+          font-family: inherit;
+          transition: all 0.2s;
+        }
+        
+        .filter-item input:focus,
+        .filter-item select:focus {
+          outline: none;
+          border-color: #000;
+        }
+        
+        /* ===== 로딩 ===== */
+        .loading-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 20px;
+          padding: 80px 20px;
           color: #666;
         }
         
-        .btn-quick-filter {
-          padding: 8px 16px;
-          background: white;
-          color: #333;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          font-size: 13px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s;
+        .spinner {
+          width: 50px;
+          height: 50px;
+          border: 5px solid #f0f0f0;
+          border-top: 5px solid #000;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
         }
         
-        .btn-quick-filter:hover {
-          background: #f5f5f5;
-          border-color: #999;
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
         
-        .btn-quick-filter:active {
-          transform: scale(0.98);
-        }
-        
-        /* ===== 작업지시서 그리드 (최적화) ===== */
+        /* ===== 작업지시서 그리드 ===== */
         .work-order-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
           gap: 20px;
           padding-bottom: 40px;
-          will-change: scroll-position;
-          transform: translateZ(0);
         }
         
-        /* ===== 카드 디자인 (심플 작업지시서) ===== */
         .work-order-card {
-          background: #ffffff;
+          background: white;
           border: 1px solid #ddd;
           border-radius: 8px;
           overflow: hidden;
           transition: all 0.2s;
-          cursor: default;
-          position: relative;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.04);
-          content-visibility: auto;
-          contain: layout style paint;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
         }
         
         .work-order-card:hover {
           border-color: #999;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-          transform: translateZ(0);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          transform: translateY(-2px);
         }
         
         .card-image {
@@ -1300,840 +647,100 @@ const HomePage = () => {
           height: 100%;
           object-fit: contain;
           transition: transform 0.3s;
-          will-change: transform;
-          content-visibility: auto;
         }
         
         .card-image:hover img {
-          transform: scale(1.03) translateZ(0);
-          backface-visibility: hidden;
+          transform: scale(1.03);
         }
         
         .click-hint {
           position: absolute;
           bottom: 8px;
           right: 8px;
-          background: rgba(0,0,0,0.6);
+          background: rgba(0, 0, 0, 0.7);
           color: white;
-          padding: 6px 12px;
-          border-radius: 4px;
-          font-size: 11px;
+          padding: 4px 12px;
+          border-radius: 12px;
+          font-size: 12px;
           opacity: 0;
           transition: opacity 0.2s;
-          pointer-events: none;
-          will-change: opacity;
-          transform: translateZ(0);
         }
         
         .card-image:hover .click-hint {
           opacity: 1;
         }
         
-        /* ===== 작업 유형 배지 (이미지 위 좌측 상단) ===== */
-        .work-type-badge {
-          position: absolute;
-          top: 12px;
-          left: 12px;
-          padding: 6px 14px;
-          border-radius: 6px;
-          font-size: 13px;
-          font-weight: 700;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-          z-index: 10;
-          letter-spacing: 0.5px;
-        }
-        
-        .fsd-badge {
-          background: linear-gradient(135deg, #ff4757 0%, #ff6348 100%);
-          color: white;
-        }
-        
-        .sd-badge {
-          background: linear-gradient(135deg, #1e90ff 0%, #4169e1 100%);
-          color: white;
-        }
-        
-        .other-badge {
-          background: linear-gradient(135deg, #ffa502 0%, #ff7f50 100%);
-          color: white;
-        }
-        
-        /* ===== 거래처명 배지 (이미지 위 우측 하단) ===== */
-        .client-badge {
-          position: absolute;
-          bottom: 12px;
-          right: 12px;
-          background: rgba(0, 0, 0, 0.85);
-          color: #ffffff;
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-size: 14px;
-          font-weight: 600;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-          backdrop-filter: blur(4px);
-          z-index: 10;
-        }
-        
         .card-info {
-          padding: 20px;
+          padding: 16px;
         }
         
-        /* ===== 카드 정보 한 줄 ===== */
-        .card-info-row {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-        
-        .info-item {
-          color: #666;
-          font-size: 13px;
-          font-weight: 400;
-        }
-        
-        .info-divider {
-          color: #ccc;
-          font-size: 12px;
-        }
-        
-        .btn-edit-inline {
-          margin-left: auto;
-          padding: 4px 10px;
-          background: #ffffff;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          font-size: 14px;
-          cursor: pointer;
-          transition: all 0.2s;
-          color: #666;
-        }
-        
-        .btn-edit-inline:hover {
-          background: #f5f5f5;
-          border-color: #999;
-          color: #000;
-        }
-        
-        .btn-delete-inline {
-          padding: 4px 10px;
-          background: #ffffff;
-          border: 1px solid #ffdddd;
-          border-radius: 4px;
-          font-size: 14px;
-          cursor: pointer;
-          transition: all 0.2s;
-          color: #666;
-        }
-        
-        .btn-delete-inline:hover {
-          background: #ffe5e5;
-          border-color: #ff6666;
-          color: #ff0000;
-        }
-        
-        /* ===== 메타 정보 (시간 + 전송자) - 삭제 예정 ===== */
-        .meta-row {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 16px;
-          padding-bottom: 12px;
-          border-bottom: 1px solid #f0f0f0;
-        }
-        
-        .meta-text {
-          color: #666;
-          font-size: 13px;
-          font-weight: 400;
-        }
-        
-        .meta-divider {
-          color: #ccc;
-          font-size: 12px;
-        }
-        
-        .info-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 12px;
-          gap: 16px;
-        }
-        
-        .info-label {
-          color: #666;
-          font-size: 15px;
-          font-weight: 500;
-          flex-shrink: 0;
-        }
-        
-        .info-value {
-          color: #000;
-          font-size: 16px;
-          font-weight: 600;
-          text-align: right;
-          word-break: break-all;
-        }
-        
-        .edit-input {
-          width: 100%;
-          padding: 10px 12px;
-          border: 1px solid #ccc;
-          border-radius: 4px;
-          font-size: 15px;
-          margin-bottom: 10px;
-          font-weight: 500;
-        }
-        
-        .edit-input:focus {
-          outline: none;
-          border-color: #000;
-        }
-        
-        /* ===== 자동완성 ===== */
-        .autocomplete-wrapper {
-          position: relative;
-          margin-bottom: 10px;
-        }
-        
-        .autocomplete-list {
-          position: absolute;
-          top: 100%;
-          left: 0;
-          right: 0;
-          background: #ffffff;
-          border: 1px solid #ccc;
-          border-top: none;
-          border-radius: 0 0 4px 4px;
-          max-height: 200px;
-          overflow-y: auto;
-          z-index: 1000;
-          margin: 0;
-          padding: 0;
-          list-style: none;
-          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        
-        .autocomplete-item {
-          padding: 10px 12px;
-          cursor: pointer;
-          font-size: 15px;
-          color: #333;
-          border-bottom: 1px solid #f0f0f0;
-        }
-        
-        .autocomplete-item:last-child {
-          border-bottom: none;
-        }
-        
-        .autocomplete-item:hover {
-          background: #f5f5f5;
-          color: #000;
-        }
-        
-        .card-actions {
+        .card-row {
           display: flex;
           gap: 8px;
-          margin-top: 16px;
-          padding-top: 16px;
-          border-top: 1px solid #f0f0f0;
-        }
-        
-        .btn-edit, .btn-save, .btn-cancel {
-          flex: 1;
-          padding: 10px 16px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          font-size: 20px;
-          font-weight: 400;
-          cursor: pointer;
-          transition: all 0.2s;
-          background: #ffffff;
-          color: #666;
-          line-height: 1;
-        }
-        
-        .btn-edit:hover {
-          background: #f5f5f5;
-          border-color: #999;
-          color: #000;
-        }
-        
-        .btn-save {
-          background: #000;
-          color: #ffffff;
-          border-color: #000;
-        }
-        
-        .btn-save:hover {
-          background: #333;
-        }
-        
-        .btn-cancel {
-          background: #ffffff;
-          color: #666;
-        }
-        
-        .btn-cancel:hover {
-          background: #f5f5f5;
-          border-color: #999;
-        }
-        
-        /* ===== 이미지 확대 모달 ===== */
-        .image-zoom-modal {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100vw;
-          height: 100vh;
-          background: rgba(0,0,0,0.9);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 10000;
-          animation: fadeIn 0.2s;
-          padding: 20px;
-        }
-        
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
-        .zoom-modal-container {
-          display: flex;
-          width: 90%;
-          max-width: 1400px;
-          height: 90vh;
-          background: white;
-          border-radius: 12px;
-          overflow: hidden;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-        }
-        
-        .zoom-modal-left {
-          flex: 1;
-          position: relative;
-          background: #f5f5f5;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
-        }
-        
-        .zoom-image {
-          max-width: 100%;
-          max-height: 100%;
-          object-fit: contain;
-        }
-        
-        .zoom-close {
-          position: absolute;
-          top: 20px;
-          right: 20px;
-          width: 40px;
-          height: 40px;
-          background: rgba(0,0,0,0.8);
-          color: white;
-          border: none;
-          border-radius: 50%;
-          font-size: 24px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s;
-          z-index: 10001;
-        }
-        
-        .zoom-close:hover {
-          background: rgba(0,0,0,1);
-          transform: rotate(90deg);
-        }
-        
-        .zoom-modal-right {
-          width: 400px;
-          background: white;
-          padding: 30px;
-          overflow-y: auto;
-          display: flex;
-          flex-direction: column;
-        }
-        
-        .modal-form-title {
-          font-size: 24px;
-          font-weight: 700;
-          color: #222;
-          margin: 0 0 24px 0;
-          padding-bottom: 16px;
-          border-bottom: 2px solid #f0f0f0;
-        }
-        
-        .modal-form-group {
-          margin-bottom: 24px;
-        }
-        
-        .modal-label {
-          display: block;
-          font-size: 14px;
-          font-weight: 600;
-          color: #333;
           margin-bottom: 8px;
+          font-size: 13px;
         }
         
-        .radio-group {
-          display: flex;
-          gap: 16px;
+        .card-row:last-child {
+          margin-bottom: 0;
         }
         
-        .radio-label {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          cursor: pointer;
-          font-size: 15px;
-          color: #666;
-        }
-        
-        .radio-label input[type="radio"] {
-          width: 18px;
-          height: 18px;
-          cursor: pointer;
-        }
-        
-        .radio-label:hover {
-          color: #222;
-        }
-        
-        .modal-input {
-          width: 100%;
-          padding: 12px;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          font-size: 15px;
-          transition: border-color 0.2s;
-        }
-        
-        .modal-input:focus {
-          outline: none;
-          border-color: #4CAF50;
-        }
-        
-        .modal-autocomplete-wrapper {
-          position: relative;
-        }
-        
-        .modal-autocomplete-list {
-          position: absolute;
-          top: 100%;
-          left: 0;
-          right: 0;
-          background: white;
-          border: 1px solid #ddd;
-          border-top: none;
-          border-radius: 0 0 6px 6px;
-          max-height: 200px;
-          overflow-y: auto;
-          z-index: 1000;
-          margin: 0;
-          padding: 0;
-          list-style: none;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        
-        .modal-autocomplete-item {
-          padding: 12px;
-          cursor: pointer;
-          font-size: 15px;
-          color: #333;
-          border-bottom: 1px solid #f0f0f0;
-          transition: background 0.2s;
-        }
-        
-        .modal-autocomplete-item:last-child {
-          border-bottom: none;
-        }
-        
-        .modal-autocomplete-item:hover {
-          background: #f5f5f5;
-          color: #000;
-        }
-        
-        .modal-textarea {
-          width: 100%;
-          padding: 12px;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          font-size: 15px;
-          resize: vertical;
-          font-family: inherit;
-          transition: border-color 0.2s;
-        }
-        
-        .modal-textarea:focus {
-          outline: none;
-          border-color: #4CAF50;
-        }
-        
-        .modal-buttons {
-          display: flex;
-          gap: 12px;
-          margin-top: auto;
-          padding-top: 24px;
-        }
-        
-        .modal-btn {
-          flex: 1;
-          padding: 14px;
-          border: none;
-          border-radius: 8px;
-          font-size: 16px;
+        .card-label {
           font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        
-        .modal-btn-save {
-          background: #4CAF50;
-          color: white;
-        }
-        
-        .modal-btn-save:hover {
-          background: #45a049;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-        }
-        
-        .modal-btn-cancel {
-          background: #f5f5f5;
           color: #666;
+          min-width: 50px;
         }
         
-        .modal-btn-cancel:hover {
-          background: #e0e0e0;
+        .card-value {
+          color: #000;
+          font-weight: 500;
         }
         
-        /* 모바일 대응 */
-        @media (max-width: 768px) {
-          .zoom-modal-container {
-            flex-direction: column;
-            width: 95%;
-            height: 95vh;
-          }
-          
-          .zoom-modal-left {
-            flex: 1;
-          }
-          
-          .zoom-modal-right {
-            width: 100%;
-            max-height: 50%;
-            padding: 20px;
-          }
+        .card-memo {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
         
-        /* ===== 로딩 및 빈 상태 ===== */
-        .loading-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 400px;
-          color: #999;
-        }
-        
-        .spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #f0f0f0;
-          border-top-color: #333;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-          margin-bottom: 16px;
-        }
-        
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-        
-        .empty-dashboard {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 400px;
+        .empty-state {
+          grid-column: 1 / -1;
           text-align: center;
-        }
-        
-        .empty-icon {
-          font-size: 80px;
-          margin-bottom: 20px;
-        }
-        
-        .empty-dashboard h2 {
-          color: #666;
-          margin-bottom: 10px;
-          font-size: 20px;
-        }
-        
-        .empty-dashboard p {
+          padding: 80px 20px;
           color: #999;
-          font-size: 14px;
-        }
-        
-        /* ===== 1920×1080 최적화 ===== */
-        @media (min-width: 1920px) {
-          .work-order-grid {
-            grid-template-columns: repeat(4, 1fr);
-            gap: 36px;
-          }
-          
-          .dashboard-main {
-            padding: 50px 80px;
-          }
-          
-          .dashboard-header h1 {
-            font-size: 36px;
-          }
-        }
-        
-        @media (min-width: 1440px) and (max-width: 1919px) {
-          .work-order-grid {
-            grid-template-columns: repeat(3, 1fr);
-            gap: 30px;
-          }
-        }
-        
-        @media (min-width: 1200px) and (max-width: 1439px) {
-          .work-order-grid {
-            grid-template-columns: repeat(3, 1fr);
-            gap: 24px;
-          }
+          font-size: 16px;
         }
         
         /* ===== 반응형 ===== */
-        @media (max-width: 1199px) {
-          .work-order-grid {
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 16px;
+        @media (max-width: 768px) {
+          .homepage-container {
+            padding: 15px;
           }
           
-          .dashboard-main {
-            padding: 30px 40px;
-          }
-        }
-        
-        @media (max-width: 768px) {
-          .dashboard-main {
+          .page-header {
             padding: 20px;
+          }
+          
+          .header-top {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 16px;
           }
           
           .work-order-grid {
             grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 12px;
+            gap: 15px;
           }
           
-          .dashboard-header h1 {
-            font-size: 24px;
+          .card-image {
+            height: 250px;
           }
-        }
-        
-        /* ===== 날짜 선택 버튼 ===== */
-        .date-actions {
-          display: flex;
-          gap: 12px;
-        }
-        
-        .btn-date-picker,
-        .btn-today {
-          padding: 10px 20px;
-          border: none;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        
-        .btn-date-picker {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        }
-        
-        .btn-date-picker:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
-        }
-        
-        .btn-today {
-          background: #f0f0f0;
-          color: #333;
-        }
-        
-        .btn-today:hover {
-          background: #e0e0e0;
-        }
-        
-        /* ===== 달력 모달 ===== */
-        .calendar-modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.6);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 999999;
-          animation: fadeIn 0.2s ease;
-        }
-        
-        .calendar-modal {
-          background: white;
-          border-radius: 16px;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-          width: 400px;
-          max-width: 90%;
-          animation: slideUp 0.3s ease;
-          position: relative;
-          z-index: 1000000;
-        }
-        
-        .calendar-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 24px;
-          border-bottom: 1px solid #e0e0e0;
-        }
-        
-        .calendar-header h2 {
-          margin: 0;
-          font-size: 20px;
-          color: #333;
-        }
-        
-        .btn-close {
-          background: none;
-          border: none;
-          font-size: 24px;
-          color: #999;
-          cursor: pointer;
-          padding: 0;
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s ease;
-        }
-        
-        .btn-close:hover {
-          background: #f0f0f0;
-          color: #333;
-        }
-        
-        .calendar-body {
-          padding: 24px;
-        }
-        
-        .date-input {
-          width: 100%;
-          padding: 14px;
-          border: 2px solid #e0e0e0;
-          border-radius: 8px;
-          font-size: 16px;
-          transition: border-color 0.2s ease;
-        }
-        
-        .date-input:focus {
-          outline: none;
-          border-color: #667eea;
-        }
-        
-        .quick-actions {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 12px;
-          margin-top: 20px;
-        }
-        
-        .btn-quick {
-          padding: 12px;
-          background: #f8f8f8;
-          border: 1px solid #e0e0e0;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          color: #333;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        
-        .btn-quick:hover {
-          background: #667eea;
-          color: white;
-          border-color: #667eea;
-        }
-        
-        @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
+          
+          .filters-grid {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>
-    </div>
-    
-    {/* 달력 모달 - dashboard-container 외부 */}
-    <div 
-      className={`calendar-modal-overlay ${showCalendar ? 'active' : ''}`}
-      onClick={() => setShowCalendar(false)}
-      style={{ display: showCalendar ? 'flex' : 'none' }}
-    >
-      <div className="calendar-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="calendar-header">
-          <h2>📅 날짜 선택</h2>
-          <button className="btn-close" onClick={() => setShowCalendar(false)}>✕</button>
-        </div>
-        <div className="calendar-body">
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => handleDateSelect(e.target.value)}
-            max={today}
-            className="date-input"
-          />
-          <div className="quick-actions">
-            <button className="btn-quick" onClick={handleTodayClick}>
-              오늘
-            </button>
-            <button className="btn-quick" onClick={() => {
-              const yesterday = new Date();
-              yesterday.setDate(yesterday.getDate() - 1);
-              handleDateSelect(yesterday.toISOString().split('T')[0]);
-            }}>
-              어제
-            </button>
-            <button className="btn-quick" onClick={() => {
-              const weekAgo = new Date();
-              weekAgo.setDate(weekAgo.getDate() - 7);
-              handleDateSelect(weekAgo.toISOString().split('T')[0]);
-            }}>
-              7일 전
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
     </>
   );
 };
