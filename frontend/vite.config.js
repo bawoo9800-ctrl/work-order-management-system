@@ -49,6 +49,10 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: undefined, // 단일 번들로 빌드
+        // 타임스탬프 기반 파일명 생성 (브라우저 캐시 무효화)
+        entryFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+        chunkFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+        assetFileNames: `assets/[name]-[hash]-${Date.now()}.[ext]`
       },
     },
   }
