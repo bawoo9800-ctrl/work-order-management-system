@@ -12,6 +12,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { workOrderAPI, clientAPI } from '../services/api';
+import ImageGalleryViewer from '../components/ImageGalleryViewer';
 
 const HomePage = () => {
   const location = useLocation();
@@ -877,125 +878,18 @@ const HomePage = () => {
         )}
       </main>
       
-      {/* 이미지 확대 모달 */}
+      {/* 🆕 고급 이미지 갤러리 뷰어 */}
       {zoomedImage && zoomedOrder && (
-        <div className="image-zoom-modal" onClick={closeImageZoom}>
-          <div className="zoom-modal-container" onClick={(e) => e.stopPropagation()}>
-            {/* 좌측: 이미지 */}
-            <div className="zoom-modal-left">
-              <button className="zoom-close" onClick={closeImageZoom}>✕</button>
-              <img src={zoomedImage} alt="확대 이미지" className="zoom-image" />
-            </div>
-            
-            {/* 우측: 폼 */}
-            <div className="zoom-modal-right">
-              <h3 className="modal-form-title">작업지시서 상세</h3>
-              
-              {/* 작업 유형 */}
-              <div className="modal-form-group">
-                <label className="modal-label">작업 유형</label>
-                <div className="radio-group">
-                  <label className="radio-label">
-                    <input
-                      type="radio"
-                      name="work_type"
-                      value="FSD"
-                      checked={modalForm.work_type === 'FSD'}
-                      onChange={(e) => setModalForm({ ...modalForm, work_type: e.target.value })}
-                    />
-                    <span>FSD</span>
-                  </label>
-                  <label className="radio-label">
-                    <input
-                      type="radio"
-                      name="work_type"
-                      value="SD"
-                      checked={modalForm.work_type === 'SD'}
-                      onChange={(e) => setModalForm({ ...modalForm, work_type: e.target.value })}
-                    />
-                    <span>SD</span>
-                  </label>
-                  <label className="radio-label">
-                    <input
-                      type="radio"
-                      name="work_type"
-                      value="기타품목"
-                      checked={modalForm.work_type === '기타품목'}
-                      onChange={(e) => setModalForm({ ...modalForm, work_type: e.target.value })}
-                    />
-                    <span>기타품목</span>
-                  </label>
-                </div>
-              </div>
-              
-              {/* 거래처명 */}
-              <div className="modal-form-group">
-                <label className="modal-label">거래처명</label>
-                <div className="modal-autocomplete-wrapper">
-                  <input
-                    type="text"
-                    className="modal-input"
-                    value={modalForm.client_name}
-                    onChange={handleModalClientNameChange}
-                    onFocus={() => {
-                      if (modalForm.client_name.trim() && filteredClientNames.length > 0) {
-                        setShowAutocomplete(true);
-                      }
-                    }}
-                    placeholder="거래처명을 입력하세요"
-                  />
-                  {showAutocomplete && (
-                    <ul className="modal-autocomplete-list">
-                      {filteredClientNames.map((client) => (
-                        <li
-                          key={client.id}
-                          onClick={() => handleModalSelectClient(client.name)}
-                          className="modal-autocomplete-item"
-                        >
-                          {client.name}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-              
-              {/* 현장명 */}
-              <div className="modal-form-group">
-                <label className="modal-label">현장명</label>
-                <input
-                  type="text"
-                  className="modal-input"
-                  value={modalForm.site_name}
-                  onChange={(e) => setModalForm({ ...modalForm, site_name: e.target.value })}
-                  placeholder="현장명을 입력하세요"
-                />
-              </div>
-              
-              {/* 메모 */}
-              <div className="modal-form-group">
-                <label className="modal-label">메모</label>
-                <textarea
-                  className="modal-textarea"
-                  value={modalForm.memo}
-                  onChange={(e) => setModalForm({ ...modalForm, memo: e.target.value })}
-                  placeholder="메모를 입력하세요"
-                  rows="4"
-                />
-              </div>
-              
-              {/* 버튼 */}
-              <div className="modal-buttons">
-                <button className="modal-btn modal-btn-save" onClick={handleModalSave}>
-                  ✓ 저장
-                </button>
-                <button className="modal-btn modal-btn-cancel" onClick={closeImageZoom}>
-                  ✕ 취소
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ImageGalleryViewer
+          images={[zoomedImage]}
+          initialIndex={0}
+          onClose={closeImageZoom}
+          workOrder={zoomedOrder}
+          onUpdateWorkOrder={async (id, data) => {
+            await workOrderAPI.update(id, data);
+            await fetchTodayWorkOrders(selectedClient?.id);
+          }}
+        />
       )}
       
       <style>{`
