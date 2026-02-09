@@ -1,6 +1,10 @@
-const express = require('express');
-const path = require('path');
-const compression = require('compression');
+import express from 'express';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import compression from 'compression';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5173;
@@ -9,7 +13,7 @@ const PORT = process.env.PORT || 5173;
 app.use(compression());
 
 // 정적 파일 서빙 (올바른 MIME 타입 자동 설정)
-app.use(express.static(path.join(__dirname, 'dist'), {
+app.use(express.static(join(__dirname, 'dist'), {
   maxAge: 0, // HTML 캐시 안 함
   etag: false,
   lastModified: false,
@@ -35,7 +39,7 @@ app.use(express.static(path.join(__dirname, 'dist'), {
 app.get('*', (req, res) => {
   // API 요청이나 정적 파일이 아닌 경우에만 index.html 반환
   if (!req.path.startsWith('/api') && !req.path.includes('.')) {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    res.sendFile(join(__dirname, 'dist', 'index.html'));
   } else {
     res.status(404).send('Not Found');
   }
@@ -43,5 +47,6 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Frontend server running on port ${PORT}`);
-  console.log(`📂 Serving: ${path.join(__dirname, 'dist')}`);
+  console.log(`📂 Serving: ${join(__dirname, 'dist')}`);
 });
+
