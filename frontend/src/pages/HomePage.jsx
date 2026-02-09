@@ -20,6 +20,16 @@ const HomePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
   const [loading, setLoading] = useState(false);
+  
+  // 🆕 고급 검색/필터 상태
+  const [filters, setFilters] = useState({
+    workType: '',        // 작업 유형
+    siteName: '',        // 현장명
+    memo: '',           // 메모 검색
+    startDate: '',      // 시작 날짜
+    endDate: '',        // 종료 날짜
+  });
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [editingCard, setEditingCard] = useState(null);
   const [editForm, setEditForm] = useState({ client_name: '', site_name: '' });
   const [zoomedImage, setZoomedImage] = useState(null);
@@ -181,6 +191,79 @@ const HomePage = () => {
     return client.name.toLowerCase().includes(searchQuery.toLowerCase());
   });
   
+  // 🆕 고급 필터 적용
+  const filteredWorkOrders = workOrders.filter(order => {
+    // 작업 유형 필터
+    if (filters.workType && order.work_type !== filters.workType) {
+      return false;
+    }
+    
+    // 현장명 검색
+    if (filters.siteName) {
+      const siteName = order.site_name || '';
+      if (!siteName.toLowerCase().includes(filters.siteName.toLowerCase())) {
+        return false;
+      }
+    }
+    
+    // 메모 검색
+    if (filters.memo) {
+      const memo = order.memo || '';
+      if (!memo.toLowerCase().includes(filters.memo.toLowerCase())) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
+  
+  // 🆕 작업 유형 목록 추출 (중복 제거)
+  const workTypes = [...new Set(workOrders.map(order => order.work_type).filter(Boolean))];
+  
+  // 🆕 필터 초기화
+  const handleResetFilters = () => {
+    setFilters({
+      workType: '',
+      siteName: '',
+      memo: '',
+      startDate: '',
+      endDate: '',
+    });
+    setSelectedDate(getKoreanDate());
+    setSelectedClient(null);
+    fetchWorkOrdersByDate(getKoreanDate());
+  };
+  
+  // 🆕 기간별 조회
+  const handleDateRangeSearch = async () => {
+    if (!filters.startDate || !filters.endDate) {
+      alert('시작일과 종료일을 모두 선택해주세요.');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const params = {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+      };
+      
+      if (selectedClient?.id) {
+        params.clientId = selectedClient.id;
+      }
+      
+      const response = await workOrderAPI.list(params);
+      const orders = response.data?.workOrders || response.workOrders || [];
+      setWorkOrders(orders);
+      
+      console.log('📅 기간별 조회:', filters.startDate, '~', filters.endDate, '결과:', orders.length);
+    } catch (error) {
+      console.error('❌ 기간별 조회 실패:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // 거래처 선택
   const handleClientClick = (client) => {
     if (selectedClient?.id === client?.id) {
@@ -192,9 +275,9 @@ const HomePage = () => {
     }
   };
   
-  // 거래처별 작업지시서 개수 계산
+  // 거래처별 작업지시서 개수 계산 (필터 적용)
   const getClientOrderCount = (clientId, clientName) => {
-    return workOrders.filter(order => {
+    return filteredWorkOrders.filter(order => {
       // client_id로 매칭하거나 client_name으로 매칭
       if (clientId && order.client_id === clientId) {
         return true;
@@ -434,7 +517,7 @@ const HomePage = () => {
           onClick={() => handleClientClick(null)}
         >
           <span className="client-name">전체 보기</span>
-          <span className="client-count">{workOrders.length}</span>
+          <span className="client-count">{filteredWorkOrders.length}</span>
         </div>
         
         {/* 거래처 목록 */}
@@ -493,20 +576,197 @@ const HomePage = () => {
           </div>
         </div>
         
+        {/* 🆕 고급 검색/필터 섹션 */}
+        <div className="filters-section">
+          <div className="filters-header">
+            <button 
+              className="btn-toggle-filters"
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            >
+              🔍 고급 검색/필터 {showAdvancedFilters ? '▲' : '▼'}
+            </button>
+            {(filters.workType || filters.siteName || filters.memo || filters.startDate) && (
+              <button 
+                className="btn-reset-filters"
+                onClick={handleResetFilters}
+              >
+                ✕ 필터 초기화
+              </button>
+            )}
+            <div className="filter-stats">
+              총 {filteredWorkOrders.length}건 / {workOrders.length}건
+            </div>
+          </div>
+          
+          {showAdvancedFilters && (
+            <div className="filters-content">
+              <div className="filters-grid">
+                {/* 작업 유형 필터 */}
+                <div className="filter-item">
+                  <label className="filter-label">
+                    <span className="filter-icon">🔧</span>
+                    작업 유형
+                  </label>
+                  <select
+                    className="filter-select"
+                    value={filters.workType}
+                    onChange={(e) => setFilters({ ...filters, workType: e.target.value })}
+                  >
+                    <option value="">전체</option>
+                    {workTypes.map((type) => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* 현장명 검색 */}
+                <div className="filter-item">
+                  <label className="filter-label">
+                    <span className="filter-icon">🏗️</span>
+                    현장명 검색
+                  </label>
+                  <input
+                    type="text"
+                    className="filter-input"
+                    placeholder="현장명을 입력하세요..."
+                    value={filters.siteName}
+                    onChange={(e) => setFilters({ ...filters, siteName: e.target.value })}
+                  />
+                </div>
+                
+                {/* 메모 검색 */}
+                <div className="filter-item">
+                  <label className="filter-label">
+                    <span className="filter-icon">📝</span>
+                    메모 검색
+                  </label>
+                  <input
+                    type="text"
+                    className="filter-input"
+                    placeholder="메모 내용을 입력하세요..."
+                    value={filters.memo}
+                    onChange={(e) => setFilters({ ...filters, memo: e.target.value })}
+                  />
+                </div>
+              </div>
+              
+              {/* 기간별 조회 */}
+              <div className="date-range-section">
+                <label className="filter-label">
+                  <span className="filter-icon">📅</span>
+                  기간별 조회
+                </label>
+                <div className="date-range-inputs">
+                  <input
+                    type="date"
+                    className="filter-date"
+                    value={filters.startDate}
+                    onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                  />
+                  <span className="date-separator">~</span>
+                  <input
+                    type="date"
+                    className="filter-date"
+                    value={filters.endDate}
+                    onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                  />
+                  <button 
+                    className="btn-date-search"
+                    onClick={handleDateRangeSearch}
+                    disabled={!filters.startDate || !filters.endDate}
+                  >
+                    🔍 조회
+                  </button>
+                </div>
+              </div>
+              
+              {/* 퀵 필터 버튼 */}
+              <div className="quick-filters">
+                <span className="quick-filters-label">빠른 기간 선택:</span>
+                <button 
+                  className="btn-quick-filter"
+                  onClick={() => {
+                    const today = getKoreanDate();
+                    setFilters({ ...filters, startDate: today, endDate: today });
+                  }}
+                >
+                  오늘
+                </button>
+                <button 
+                  className="btn-quick-filter"
+                  onClick={() => {
+                    const today = new Date();
+                    const yesterday = new Date(today);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const yesterdayStr = yesterday.toISOString().split('T')[0];
+                    setFilters({ ...filters, startDate: yesterdayStr, endDate: yesterdayStr });
+                  }}
+                >
+                  어제
+                </button>
+                <button 
+                  className="btn-quick-filter"
+                  onClick={() => {
+                    const today = new Date();
+                    const weekAgo = new Date(today);
+                    weekAgo.setDate(weekAgo.getDate() - 7);
+                    setFilters({ 
+                      ...filters, 
+                      startDate: weekAgo.toISOString().split('T')[0], 
+                      endDate: getKoreanDate() 
+                    });
+                  }}
+                >
+                  최근 7일
+                </button>
+                <button 
+                  className="btn-quick-filter"
+                  onClick={() => {
+                    const today = new Date();
+                    const monthAgo = new Date(today);
+                    monthAgo.setDate(monthAgo.getDate() - 30);
+                    setFilters({ 
+                      ...filters, 
+                      startDate: monthAgo.toISOString().split('T')[0], 
+                      endDate: getKoreanDate() 
+                    });
+                  }}
+                >
+                  최근 30일
+                </button>
+                <button 
+                  className="btn-quick-filter"
+                  onClick={() => {
+                    const today = new Date();
+                    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                    setFilters({ 
+                      ...filters, 
+                      startDate: firstDay.toISOString().split('T')[0], 
+                      endDate: getKoreanDate() 
+                    });
+                  }}
+                >
+                  이번 달
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+        
         {loading ? (
           <div className="loading-container">
             <div className="spinner"></div>
             <p>로딩 중...</p>
           </div>
-        ) : workOrders.length === 0 ? (
+        ) : filteredWorkOrders.length === 0 ? (
           <div className="empty-dashboard">
             <div className="empty-icon">📭</div>
-            <h2>오늘 등록된 작업지시서가 없습니다.</h2>
-            <p>작업지시서를 업로드해주세요.</p>
+            <h2>검색 결과가 없습니다.</h2>
+            <p>필터 조건을 변경해보세요.</p>
           </div>
         ) : (
           <div className="work-order-grid">
-            {workOrders.map((order) => (
+            {filteredWorkOrders.map((order) => (
               <div key={order.id} className="work-order-card">
                 {/* 이미지 */}
                 <div 
@@ -891,6 +1151,214 @@ const HomePage = () => {
           color: #666;
           font-size: 15px;
           font-weight: 400;
+        }
+        
+        /* ===== 🆕 고급 검색/필터 섹션 ===== */
+        .filters-section {
+          background: #ffffff;
+          border: 1px solid #ddd;
+          border-radius: 12px;
+          margin-bottom: 30px;
+          overflow: hidden;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        
+        .filters-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px 20px;
+          background: #fafafa;
+          border-bottom: 1px solid #e5e5e5;
+        }
+        
+        .btn-toggle-filters {
+          padding: 10px 20px;
+          background: #000;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .btn-toggle-filters:hover {
+          background: #333;
+          transform: translateY(-1px);
+        }
+        
+        .btn-reset-filters {
+          padding: 10px 16px;
+          background: #f44336;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        
+        .btn-reset-filters:hover {
+          background: #d32f2f;
+        }
+        
+        .filter-stats {
+          margin-left: auto;
+          font-size: 14px;
+          font-weight: 600;
+          color: #666;
+          background: #f0f0f0;
+          padding: 8px 16px;
+          border-radius: 6px;
+        }
+        
+        .filters-content {
+          padding: 24px;
+          background: white;
+        }
+        
+        .filters-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 20px;
+          margin-bottom: 24px;
+        }
+        
+        .filter-item {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        
+        .filter-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          color: #333;
+        }
+        
+        .filter-icon {
+          font-size: 18px;
+        }
+        
+        .filter-select,
+        .filter-input {
+          padding: 12px 16px;
+          border: 2px solid #e0e0e0;
+          border-radius: 8px;
+          font-size: 14px;
+          background: white;
+          transition: all 0.2s;
+          outline: none;
+        }
+        
+        .filter-select:focus,
+        .filter-input:focus {
+          border-color: #000;
+          box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+        }
+        
+        .date-range-section {
+          padding: 20px;
+          background: #f9f9f9;
+          border-radius: 8px;
+          border: 1px solid #e5e5e5;
+        }
+        
+        .date-range-inputs {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+        
+        .filter-date {
+          padding: 12px 16px;
+          border: 2px solid #e0e0e0;
+          border-radius: 8px;
+          font-size: 14px;
+          background: white;
+          transition: all 0.2s;
+          outline: none;
+          flex: 1;
+          min-width: 180px;
+        }
+        
+        .filter-date:focus {
+          border-color: #000;
+          box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+        }
+        
+        .date-separator {
+          font-weight: 600;
+          color: #999;
+          font-size: 16px;
+        }
+        
+        .btn-date-search {
+          padding: 12px 24px;
+          background: #4CAF50;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          white-space: nowrap;
+        }
+        
+        .btn-date-search:hover:not(:disabled) {
+          background: #45a049;
+          transform: translateY(-1px);
+        }
+        
+        .btn-date-search:disabled {
+          background: #ccc;
+          cursor: not-allowed;
+        }
+        
+        .quick-filters {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-top: 16px;
+          flex-wrap: wrap;
+        }
+        
+        .quick-filters-label {
+          font-size: 13px;
+          font-weight: 600;
+          color: #666;
+        }
+        
+        .btn-quick-filter {
+          padding: 8px 16px;
+          background: white;
+          color: #333;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        
+        .btn-quick-filter:hover {
+          background: #f5f5f5;
+          border-color: #999;
+        }
+        
+        .btn-quick-filter:active {
+          transform: scale(0.98);
         }
         
         /* ===== 작업지시서 그리드 (1920×1080 최적화) ===== */
