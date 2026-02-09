@@ -455,9 +455,10 @@ function ImageGalleryViewer({
         .gallery-container {
           position: relative;
           display: flex;
-          width: 95vw;
-          height: 95vh;
-          max-width: 1800px;
+          width: 90vw;
+          height: 85vh;
+          max-width: 1400px;
+          max-height: 900px;
           background: #1a1a1a;
           border-radius: 12px;
           overflow: hidden;
@@ -586,35 +587,37 @@ function ImageGalleryViewer({
         }
         
         .gallery-right {
-          width: 400px;
+          width: 380px;
           background: white;
           display: flex;
           flex-direction: column;
           overflow-y: auto;
+          flex-shrink: 0;
         }
         
         .gallery-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 24px;
+          padding: 16px 20px;
           border-bottom: 1px solid #e0e0e0;
+          flex-shrink: 0;
         }
         
         .gallery-header h3 {
           margin: 0;
-          font-size: 20px;
+          font-size: 18px;
           font-weight: 700;
           color: #333;
         }
         
         .btn-close-gallery {
-          width: 36px;
-          height: 36px;
+          width: 32px;
+          height: 32px;
           background: #f5f5f5;
           border: none;
           border-radius: 8px;
-          font-size: 20px;
+          font-size: 18px;
           cursor: pointer;
           transition: all 0.2s;
         }
@@ -625,47 +628,48 @@ function ImageGalleryViewer({
         
         .gallery-form {
           flex: 1;
-          padding: 24px;
+          padding: 20px;
+          overflow-y: auto;
         }
         
         .form-group {
-          margin-bottom: 24px;
+          margin-bottom: 20px;
         }
         
         .form-label {
           display: block;
-          margin-bottom: 8px;
-          font-size: 14px;
+          margin-bottom: 6px;
+          font-size: 13px;
           font-weight: 600;
           color: #333;
         }
         
         .radio-group {
           display: flex;
-          gap: 16px;
+          gap: 12px;
         }
         
         .radio-label {
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 5px;
           cursor: pointer;
-          font-size: 14px;
+          font-size: 13px;
         }
         
         .radio-label input[type="radio"] {
-          width: 18px;
-          height: 18px;
+          width: 16px;
+          height: 16px;
           cursor: pointer;
         }
         
         .form-input,
         .form-textarea {
           width: 100%;
-          padding: 12px;
+          padding: 10px 12px;
           border: 2px solid #e0e0e0;
           border-radius: 8px;
-          font-size: 14px;
+          font-size: 13px;
           outline: none;
           transition: all 0.2s;
         }
@@ -678,17 +682,17 @@ function ImageGalleryViewer({
         
         .form-textarea {
           resize: vertical;
-          min-height: 100px;
+          min-height: 80px;
         }
         
         .btn-save-gallery {
           width: 100%;
-          padding: 14px;
+          padding: 12px;
           background: #4CAF50;
           color: white;
           border: none;
           border-radius: 8px;
-          font-size: 16px;
+          font-size: 15px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
@@ -701,16 +705,16 @@ function ImageGalleryViewer({
         }
         
         .work-order-meta {
-          margin-top: 24px;
-          padding-top: 24px;
+          margin-top: 20px;
+          padding-top: 20px;
           border-top: 1px solid #e0e0e0;
         }
         
         .meta-item {
           display: flex;
           justify-content: space-between;
-          padding: 8px 0;
-          font-size: 14px;
+          padding: 6px 0;
+          font-size: 13px;
         }
         
         .meta-label {
