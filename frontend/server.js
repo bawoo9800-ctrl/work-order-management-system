@@ -14,7 +14,7 @@ app.use(compression());
 
 // 정적 파일 서빙 (올바른 MIME 타입 자동 설정)
 app.use(express.static(join(__dirname, 'dist'), {
-  maxAge: 0, // HTML 캐시 안 함
+  maxAge: 0,
   etag: false,
   lastModified: false,
   setHeaders: (res, filePath) => {
@@ -35,18 +35,14 @@ app.use(express.static(join(__dirname, 'dist'), {
   }
 }));
 
-// SPA 폴백: 모든 경로를 index.html로
-app.get('*', (req, res) => {
-  // API 요청이나 정적 파일이 아닌 경우에만 index.html 반환
-  if (!req.path.startsWith('/api') && !req.path.includes('.')) {
-    res.sendFile(join(__dirname, 'dist', 'index.html'));
-  } else {
-    res.status(404).send('Not Found');
-  }
+// SPA 폴백: 정적 파일이 없으면 index.html 반환
+app.use((req, res) => {
+  res.sendFile(join(__dirname, 'dist', 'index.html'));
 });
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Frontend server running on port ${PORT}`);
   console.log(`📂 Serving: ${join(__dirname, 'dist')}`);
 });
+
 
