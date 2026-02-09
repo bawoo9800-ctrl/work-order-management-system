@@ -41,6 +41,27 @@ function ImageGalleryViewer({
   const imageRef = useRef(null);
   const containerRef = useRef(null);
   
+  // 모달 열릴 때 body 스크롤 막기
+  useEffect(() => {
+    // 현재 스크롤 위치 저장
+    const scrollY = window.scrollY;
+    
+    // body 스크롤 막기
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    
+    // 컴포넌트 언마운트 시 복원
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+  
   // 작업지시서 정보 초기화
   useEffect(() => {
     if (workOrder) {
@@ -437,23 +458,31 @@ function ImageGalleryViewer({
           left: 0;
           right: 0;
           bottom: 0;
+          width: 100vw;
+          height: 100vh;
           z-index: 10000;
           display: flex;
           align-items: center;
           justify-content: center;
+          overflow: hidden;
         }
         
         .gallery-overlay {
-          position: absolute;
+          position: fixed;
           top: 0;
           left: 0;
           right: 0;
           bottom: 0;
+          width: 100%;
+          height: 100%;
           background: rgba(0, 0, 0, 0.95);
         }
         
         .gallery-container {
-          position: relative;
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
           display: flex;
           width: 85vw;
           height: 80vh;
@@ -463,6 +492,7 @@ function ImageGalleryViewer({
           border-radius: 12px;
           overflow: hidden;
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+          z-index: 10001;
         }
         
         .gallery-left {
