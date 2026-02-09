@@ -455,10 +455,10 @@ function ImageGalleryViewer({
         .gallery-container {
           position: relative;
           display: flex;
-          width: 90vw;
-          height: 85vh;
-          max-width: 1400px;
-          max-height: 900px;
+          width: 85vw;
+          height: 80vh;
+          max-width: 1200px;
+          max-height: 800px;
           background: #1a1a1a;
           border-radius: 12px;
           overflow: hidden;
@@ -587,7 +587,8 @@ function ImageGalleryViewer({
         }
         
         .gallery-right {
-          width: 380px;
+          width: 350px;
+          height: 100%;
           background: white;
           display: flex;
           flex-direction: column;
@@ -628,12 +629,13 @@ function ImageGalleryViewer({
         
         .gallery-form {
           flex: 1;
-          padding: 20px;
+          padding: 16px 20px;
           overflow-y: auto;
+          min-height: 0;
         }
         
         .form-group {
-          margin-bottom: 20px;
+          margin-bottom: 16px;
         }
         
         .form-label {
