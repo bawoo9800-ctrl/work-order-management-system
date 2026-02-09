@@ -192,6 +192,18 @@ const HomePage = () => {
       console.error('❌ 작업지시서 업데이트 실패:', error);
     }
   };
+  
+  // 작업지시서 삭제
+  const handleDeleteWorkOrder = async (id) => {
+    try {
+      await workOrderAPI.delete(id);
+      await fetchWorkOrdersByDate(selectedDate);
+      console.log('✅ 작업지시서 삭제 완료:', id);
+    } catch (error) {
+      console.error('❌ 작업지시서 삭제 실패:', error);
+      throw error;
+    }
+  };
 
   return (
     <>
@@ -378,6 +390,7 @@ const HomePage = () => {
           onClose={closeImageZoom}
           workOrder={zoomedOrder}
           onUpdateWorkOrder={handleUpdateWorkOrder}
+          onDeleteWorkOrder={handleDeleteWorkOrder}
         />
       )}
       

@@ -19,7 +19,8 @@ function ImageGalleryViewer({
   initialIndex = 0, 
   onClose, 
   workOrder = null,
-  onUpdateWorkOrder = null 
+  onUpdateWorkOrder = null,
+  onDeleteWorkOrder = null
 }) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [scale, setScale] = useState(1);
@@ -250,6 +251,28 @@ function ImageGalleryViewer({
     }
   };
   
+  // 작업지시서 삭제
+  const handleDeleteWorkOrder = async () => {
+    if (!workOrder) return;
+    
+    const confirmed = window.confirm(
+      `정말 삭제하시겠습니까?\n\n거래처: ${workOrder.client_name || '-'}\n현장: ${workOrder.site_name || '-'}\n\n이 작업은 되돌릴 수 없습니다.`
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      if (onDeleteWorkOrder) {
+        await onDeleteWorkOrder(workOrder.id);
+        alert('삭제되었습니다!');
+        onClose(); // 모달 닫기
+      }
+    } catch (error) {
+      console.error('❌ 삭제 실패:', error);
+      alert('삭제에 실패했습니다.');
+    }
+  };
+  
   return (
     <div className="image-gallery-viewer">
       {/* 배경 오버레이 */}
@@ -428,10 +451,15 @@ function ImageGalleryViewer({
                 />
               </div>
               
-              {/* 저장 버튼 */}
-              <button className="btn-save-gallery" onClick={handleSaveWorkOrder}>
-                💾 저장
-              </button>
+              {/* 저장/삭제 버튼 */}
+              <div className="button-group">
+                <button className="btn-save-gallery" onClick={handleSaveWorkOrder}>
+                  💾 저장
+                </button>
+                <button className="btn-delete-gallery" onClick={handleDeleteWorkOrder}>
+                  🗑️ 삭제
+                </button>
+              </div>
               
               {/* 작업지시서 정보 */}
               <div className="work-order-meta">
@@ -717,8 +745,13 @@ function ImageGalleryViewer({
           min-height: 80px;
         }
         
+        .button-group {
+          display: flex;
+          gap: 10px;
+        }
+        
         .btn-save-gallery {
-          width: 100%;
+          flex: 1;
           padding: 12px;
           background: #4CAF50;
           color: white;
@@ -734,6 +767,25 @@ function ImageGalleryViewer({
           background: #45a049;
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+        
+        .btn-delete-gallery {
+          flex: 1;
+          padding: 12px;
+          background: #f44336;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        
+        .btn-delete-gallery:hover {
+          background: #da190b;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
         }
         
         .work-order-meta {
