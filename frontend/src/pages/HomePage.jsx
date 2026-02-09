@@ -1255,11 +1255,11 @@ const HomePage = () => {
           transform: scale(0.98);
         }
         
-        /* ===== 작업지시서 그리드 (1920×1080 최적화) ===== */
+        /* ===== 작업지시서 그리드 (최적화) ===== */
         .work-order-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-          gap: 30px;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 20px;
           padding-bottom: 40px;
           will-change: scroll-position;
           transform: translateZ(0);
@@ -1287,7 +1287,7 @@ const HomePage = () => {
         
         .card-image {
           width: 100%;
-          aspect-ratio: 210 / 297;
+          height: 350px;
           background: #ffffff;
           overflow: hidden;
           cursor: pointer;
