@@ -429,11 +429,11 @@ function ImageGalleryViewer({
                     <input
                       type="radio"
                       name="work_type"
-                      value="RSD"
-                      checked={modalForm.work_type === 'RSD'}
+                      value="SD"
+                      checked={modalForm.work_type === 'SD'}
                       onChange={(e) => setModalForm({ ...modalForm, work_type: e.target.value })}
                     />
-                    <span>RSD</span>
+                    <span>SD</span>
                   </label>
                   <label className="radio-label">
                     <input
