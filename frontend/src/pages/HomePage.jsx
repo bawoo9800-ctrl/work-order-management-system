@@ -643,9 +643,11 @@ const HomePage = () => {
         /* ===== 작업지시서 그리드 ===== */
         .work-order-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 20px;
+          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+          gap: 24px;
           padding-bottom: 40px;
+          max-width: 1920px;
+          margin: 0 auto;
         }
         
         .work-order-card {
@@ -785,6 +787,38 @@ const HomePage = () => {
         }
         
         /* ===== 반응형 ===== */
+        
+        /* 대형 데스크톱 (1920px+) */
+        @media (min-width: 1920px) {
+          .work-order-grid {
+            grid-template-columns: repeat(5, 1fr);
+            max-width: 1920px;
+          }
+        }
+        
+        /* 일반 데스크톱 (1440-1919px) */
+        @media (min-width: 1440px) and (max-width: 1919px) {
+          .work-order-grid {
+            grid-template-columns: repeat(4, 1fr);
+          }
+        }
+        
+        /* 소형 데스크톱/태블릿 (1024-1439px) */
+        @media (min-width: 1024px) and (max-width: 1439px) {
+          .work-order-grid {
+            grid-template-columns: repeat(3, 1fr);
+          }
+        }
+        
+        /* 태블릿 (768-1023px) */
+        @media (min-width: 768px) and (max-width: 1023px) {
+          .work-order-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+          }
+        }
+        
+        /* 모바일 (768px 이하) */
         @media (max-width: 768px) {
           .homepage-container {
             padding: 15px;
