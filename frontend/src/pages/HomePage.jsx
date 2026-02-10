@@ -711,7 +711,7 @@ const HomePage = () => {
           color: white;
           padding: 5px 12px;
           border-radius: 20px;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 600;
           backdrop-filter: blur(10px);
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
