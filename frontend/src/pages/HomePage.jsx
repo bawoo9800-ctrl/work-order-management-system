@@ -355,7 +355,7 @@ const HomePage = () => {
                     {/* 거래처명 배지 */}
                     {order.client_name && (
                       <div className="client-badge">
-                        🏢 {order.client_name}
+                        {order.client_name}
                       </div>
                     )}
                   </div>
@@ -705,13 +705,13 @@ const HomePage = () => {
         
         .client-badge {
           position: absolute;
-          top: 12px;
-          left: 12px;
+          bottom: 12px;
+          right: 12px;
           background: rgba(0, 0, 0, 0.85);
           color: white;
-          padding: 6px 14px;
+          padding: 5px 12px;
           border-radius: 20px;
-          font-size: 13px;
+          font-size: 12px;
           font-weight: 600;
           backdrop-filter: blur(10px);
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
