@@ -351,13 +351,16 @@ const HomePage = () => {
                       loading="lazy"
                     />
                     <div className="click-hint">클릭하여 확대</div>
+                    
+                    {/* 거래처명 배지 */}
+                    {order.client_name && (
+                      <div className="client-badge">
+                        🏢 {order.client_name}
+                      </div>
+                    )}
                   </div>
                   
                   <div className="card-info">
-                    <div className="card-row">
-                      <span className="card-label">거래처:</span>
-                      <span className="card-value">{order.client_name || '-'}</span>
-                    </div>
                     <div className="card-row">
                       <span className="card-label">현장:</span>
                       <span className="card-value">{order.site_name || '-'}</span>
@@ -374,6 +377,20 @@ const HomePage = () => {
                         <span className="card-value card-memo">{order.memo}</span>
                       </div>
                     )}
+                  </div>
+                  
+                  {/* 하단 메타 정보 */}
+                  <div className="card-footer">
+                    <span className="footer-user">👤 {order.uploaded_by || '알 수 없음'}</span>
+                    <span className="footer-divider">•</span>
+                    <span className="footer-time">
+                      {new Date(order.created_at).toLocaleDateString('ko-KR', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
                   </div>
                 </div>
               ))
@@ -684,8 +701,27 @@ const HomePage = () => {
           opacity: 1;
         }
         
+        .client-badge {
+          position: absolute;
+          top: 12px;
+          left: 12px;
+          background: rgba(0, 0, 0, 0.85);
+          color: white;
+          padding: 6px 14px;
+          border-radius: 20px;
+          font-size: 13px;
+          font-weight: 600;
+          backdrop-filter: blur(10px);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+          max-width: calc(100% - 24px);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        
         .card-info {
           padding: 16px;
+          padding-bottom: 12px;
         }
         
         .card-row {
@@ -715,6 +751,29 @@ const HomePage = () => {
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
+        }
+        
+        .card-footer {
+          display: flex;
+          align-items: center;
+          padding: 10px 16px;
+          border-top: 1px solid #f0f0f0;
+          background: #fafafa;
+          font-size: 12px;
+          color: #666;
+        }
+        
+        .footer-user {
+          font-weight: 600;
+        }
+        
+        .footer-divider {
+          margin: 0 8px;
+          color: #ccc;
+        }
+        
+        .footer-time {
+          color: #999;
         }
         
         .empty-state {
