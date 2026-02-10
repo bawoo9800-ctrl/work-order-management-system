@@ -391,6 +391,7 @@ const HomePage = () => {
           workOrder={zoomedOrder}
           onUpdateWorkOrder={handleUpdateWorkOrder}
           onDeleteWorkOrder={handleDeleteWorkOrder}
+          clients={clients}
         />
       )}
       

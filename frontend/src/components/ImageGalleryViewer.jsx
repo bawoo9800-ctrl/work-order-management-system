@@ -20,7 +20,8 @@ function ImageGalleryViewer({
   onClose, 
   workOrder = null,
   onUpdateWorkOrder = null,
-  onDeleteWorkOrder = null
+  onDeleteWorkOrder = null,
+  clients = []
 }) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [scale, setScale] = useState(1);
@@ -30,6 +31,10 @@ function ImageGalleryViewer({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [loading, setLoading] = useState(true);
   const [showInfo, setShowInfo] = useState(true);
+  
+  // 자동완성 상태
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const [filteredClients, setFilteredClients] = useState([]);
   
   // 작업지시서 폼 상태
   const [modalForm, setModalForm] = useState({
@@ -273,6 +278,34 @@ function ImageGalleryViewer({
     }
   };
   
+  // 거래처명 입력 핸들러 (자동완성)
+  const handleClientNameChange = (e) => {
+    const value = e.target.value;
+    setModalForm({ ...modalForm, client_name: value });
+    
+    // 자동완성 필터링
+    if (value.trim() && clients.length > 0) {
+      const filtered = clients
+        .filter(client => 
+          client.name.toLowerCase().includes(value.toLowerCase())
+        )
+        .slice(0, 5); // 최대 5개
+      
+      setFilteredClients(filtered);
+      setShowAutocomplete(filtered.length > 0);
+    } else {
+      setShowAutocomplete(false);
+      setFilteredClients([]);
+    }
+  };
+  
+  // 자동완성 항목 선택
+  const handleSelectClient = (clientName) => {
+    setModalForm({ ...modalForm, client_name: clientName });
+    setShowAutocomplete(false);
+    setFilteredClients([]);
+  };
+  
   return (
     <div className="image-gallery-viewer">
       {/* 배경 오버레이 */}
@@ -418,13 +451,35 @@ function ImageGalleryViewer({
               {/* 거래처명 */}
               <div className="form-group">
                 <label className="form-label">거래처명</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={modalForm.client_name}
-                  onChange={(e) => setModalForm({ ...modalForm, client_name: e.target.value })}
-                  placeholder="거래처명을 입력하세요"
-                />
+                <div className="autocomplete-wrapper">
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={modalForm.client_name}
+                    onChange={handleClientNameChange}
+                    onFocus={() => {
+                      if (modalForm.client_name && filteredClients.length > 0) {
+                        setShowAutocomplete(true);
+                      }
+                    }}
+                    placeholder="거래처명을 입력하세요"
+                  />
+                  
+                  {/* 자동완성 드롭다운 */}
+                  {showAutocomplete && filteredClients.length > 0 && (
+                    <div className="autocomplete-list">
+                      {filteredClients.map((client) => (
+                        <div
+                          key={client.id}
+                          className="autocomplete-item"
+                          onClick={() => handleSelectClient(client.name)}
+                        >
+                          {client.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               
               {/* 현장명 */}
@@ -743,6 +798,41 @@ function ImageGalleryViewer({
         .form-textarea {
           resize: vertical;
           min-height: 80px;
+        }
+        
+        .autocomplete-wrapper {
+          position: relative;
+        }
+        
+        .autocomplete-list {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          background: white;
+          border: 2px solid #e0e0e0;
+          border-top: none;
+          border-radius: 0 0 8px 8px;
+          max-height: 200px;
+          overflow-y: auto;
+          z-index: 1000;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .autocomplete-item {
+          padding: 10px 12px;
+          cursor: pointer;
+          font-size: 13px;
+          color: #333;
+          transition: all 0.2s;
+        }
+        
+        .autocomplete-item:hover {
+          background: #f8f8f8;
+        }
+        
+        .autocomplete-item:active {
+          background: #f0f0f0;
         }
         
         .button-group {
