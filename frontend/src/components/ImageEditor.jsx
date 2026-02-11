@@ -17,6 +17,12 @@ export default function ImageEditor({ imageUrl, onSave, onCancel, workOrderId })
   const [sharpness, setSharpness] = useState(0);
   const [rotation, setRotation] = useState(0);
   
+  // 크롭 관련 상태
+  const [cropMode, setCropMode] = useState(false);
+  const [cropStart, setCropStart] = useState(null);
+  const [cropEnd, setCropEnd] = useState(null);
+  const [cropRect, setCropRect] = useState(null);
+  
   // 이미지 로드
   useEffect(() => {
     const img = new Image();
@@ -144,6 +150,92 @@ export default function ImageEditor({ imageUrl, onSave, onCancel, workOrderId })
     ctx.putImageData(imageData, 0, 0);
   };
 
+  // 수동 크롭 모드 토글
+  const toggleCropMode = () => {
+    setCropMode(!cropMode);
+    setCropStart(null);
+    setCropEnd(null);
+    setCropRect(null);
+  };
+  
+  // 캔버스 클릭 이벤트 (크롭 영역 선택)
+  const handleCanvasMouseDown = (e) => {
+    if (!cropMode) return;
+    
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    
+    setCropStart({ x, y });
+    setCropEnd(null);
+  };
+  
+  const handleCanvasMouseMove = (e) => {
+    if (!cropMode || !cropStart) return;
+    
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    
+    setCropEnd({ x, y });
+  };
+  
+  const handleCanvasMouseUp = () => {
+    if (!cropMode || !cropStart || !cropEnd) return;
+    
+    const minX = Math.min(cropStart.x, cropEnd.x);
+    const minY = Math.min(cropStart.y, cropEnd.y);
+    const maxX = Math.max(cropStart.x, cropEnd.x);
+    const maxY = Math.max(cropStart.y, cropEnd.y);
+    
+    setCropRect({
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY
+    });
+  };
+  
+  // 크롭 적용
+  const applyCrop = () => {
+    if (!cropRect) {
+      alert('크롭할 영역을 먼저 선택해주세요.');
+      return;
+    }
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const { x, y, width, height } = cropRect;
+    
+    // 크롭된 영역 추출
+    const croppedImageData = ctx.getImageData(x, y, width, height);
+    
+    // 캔버스 크기 조정
+    canvas.width = width;
+    canvas.height = height;
+    
+    // 크롭된 이미지 그리기
+    ctx.putImageData(croppedImageData, 0, 0);
+    
+    // 상태 초기화
+    setCropMode(false);
+    setCropStart(null);
+    setCropEnd(null);
+    setCropRect(null);
+    
+    alert(`✂️ 크롭 완료!\n크기: ${Math.round(width)}x${Math.round(height)}px`);
+  };
+  
   // 자동 크롭 (배경 제거)
   const handleAutoCrop = () => {
     const canvas = canvasRef.current;
@@ -214,14 +306,58 @@ export default function ImageEditor({ imageUrl, onSave, onCancel, workOrderId })
     }
   };
   
-  // 저장
-  const handleSave = () => {
+  // 저장 (서버 업로드)
+  const handleSave = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    canvas.toBlob((blob) => {
-      onSave(blob);
-    }, 'image/jpeg', 0.95);
+    setProcessing(true);
+    
+    try {
+      // Canvas를 Blob으로 변환
+      const blob = await new Promise((resolve) => {
+        canvas.toBlob(resolve, 'image/jpeg', 0.95);
+      });
+      
+      if (!workOrderId) {
+        // workOrderId가 없으면 다운로드만
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `edited_image_${Date.now()}.jpg`;
+        a.click();
+        URL.revokeObjectURL(url);
+        alert('✅ 이미지가 다운로드되었습니다.');
+        setProcessing(false);
+        return;
+      }
+      
+      // FormData 생성
+      const formData = new FormData();
+      formData.append('image', blob, 'edited_image.jpg');
+      
+      // 서버로 업로드
+      const response = await workOrderAPI.uploadEditedImage(workOrderId, formData);
+      
+      if (response.success) {
+        alert(`✅ 이미지가 저장되었습니다!\n파일 크기: ${(response.data.fileSize / 1024).toFixed(1)} KB`);
+        
+        // 부모 컴포넌트에 알림 (이미지 갤러리 새로고침)
+        if (onSave) {
+          onSave(blob);
+        }
+        
+        // 편집기 닫기
+        if (onCancel) {
+          onCancel();
+        }
+      }
+    } catch (error) {
+      console.error('이미지 저장 실패:', error);
+      alert('❌ 이미지 저장에 실패했습니다.\n' + (error.response?.data?.error || error.message));
+    } finally {
+      setProcessing(false);
+    }
   };
   
   // 실시간 업데이트
@@ -230,6 +366,50 @@ export default function ImageEditor({ imageUrl, onSave, onCancel, workOrderId })
       drawImage(originalImage);
     }
   }, [brightness, contrast, sharpness, rotation]);
+  
+  // 크롭 영역 그리기
+  useEffect(() => {
+    if (!cropMode) return;
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    // 이미지 다시 그리기
+    if (originalImage) {
+      drawImage(originalImage);
+    }
+    
+    // 크롭 영역 표시
+    if (cropStart && cropEnd) {
+      ctx.save();
+      ctx.strokeStyle = '#00ff00';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      
+      const x = Math.min(cropStart.x, cropEnd.x);
+      const y = Math.min(cropStart.y, cropEnd.y);
+      const width = Math.abs(cropEnd.x - cropStart.x);
+      const height = Math.abs(cropEnd.y - cropStart.y);
+      
+      ctx.strokeRect(x, y, width, height);
+      
+      // 반투명 오버레이
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(x, y, width, height);
+      
+      ctx.restore();
+    } else if (cropRect) {
+      ctx.save();
+      ctx.strokeStyle = '#00ff00';
+      ctx.lineWidth = 2;
+      
+      ctx.strokeRect(cropRect.x, cropRect.y, cropRect.width, cropRect.height);
+      ctx.restore();
+    }
+  }, [cropMode, cropStart, cropEnd, cropRect]);
   
   return (
     <div className="image-editor-modal">
@@ -292,6 +472,10 @@ export default function ImageEditor({ imageUrl, onSave, onCancel, workOrderId })
           max-width: 100%;
           max-height: 100%;
           background: white;
+        }
+        
+        canvas.crop-mode {
+          cursor: crosshair;
         }
         
         .controls-panel {
@@ -422,7 +606,13 @@ export default function ImageEditor({ imageUrl, onSave, onCancel, workOrderId })
       <div className="editor-content">
         <div className="canvas-area">
           <div className="canvas-wrapper">
-            <canvas ref={canvasRef} />
+            <canvas 
+              ref={canvasRef}
+              className={cropMode ? 'crop-mode' : ''}
+              onMouseDown={handleCanvasMouseDown}
+              onMouseMove={handleCanvasMouseMove}
+              onMouseUp={handleCanvasMouseUp}
+            />
           </div>
         </div>
         
@@ -448,10 +638,24 @@ export default function ImageEditor({ imageUrl, onSave, onCancel, workOrderId })
               📄 텍스트 선명 (임계값)
             </button>
             <button 
-              className="btn btn-warning btn-small"
+              className={`btn ${cropMode ? 'btn-success' : 'btn-warning'} btn-small`}
+              onClick={toggleCropMode}
+            >
+              {cropMode ? '✅ 크롭 모드 ON' : '✂️ 수동 크롭'}
+            </button>
+            {cropMode && cropRect && (
+              <button 
+                className="btn btn-primary btn-small"
+                onClick={applyCrop}
+              >
+                ✂️ 크롭 적용
+              </button>
+            )}
+            <button 
+              className="btn btn-secondary btn-small"
               onClick={handleAutoCrop}
             >
-              ✂️ 자동 크롭 (배경 제거)
+              🤖 자동 크롭 (배경 제거)
             </button>
             <button 
               className="btn btn-secondary btn-small"

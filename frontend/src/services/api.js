@@ -132,6 +132,20 @@ export const workOrderAPI = {
     const response = await apiClient.post(`/api/v1/work-orders/${id}/process-image`, options);
     return response.data;
   },
+
+  // 편집된 이미지 업로드
+  uploadEditedImage: async (id, formData) => {
+    const response = await apiClient.post(
+      `/api/v1/work-orders/${id}/upload-edited-image`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
+  },
 };
 
 /**
