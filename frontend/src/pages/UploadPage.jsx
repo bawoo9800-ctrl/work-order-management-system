@@ -1,13 +1,12 @@
 /**
  * ========================================
- * 촬영 페이지 (Upload Page) - 리디자인
+ * 촬영 페이지 (Upload Page) - 다중 이미지 지원
  * ========================================
  * 파일: src/pages/UploadPage.jsx
- * 설명: 작업지시서 촬영 및 업로드
- *       - 모던한 UI/UX
- *       - 사용자 선택 (드롭다운)
- *       - 이미지 압축
- *       - 실시간 미리보기
+ * 설명: 작업지시서 촬영 및 업로드 (여러 장 선택 가능)
+ *       - 다중 이미지 선택
+ *       - 개별 이미지 삭제
+ *       - 하나의 작업지시서에 일괄 업로드
  * ========================================
  */
 
@@ -22,22 +21,20 @@ function UploadPage() {
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
+  // 다중 이미지 지원: 배열로 변경
+  const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [compressing, setCompressing] = useState(false);
   const [scanning, setScanning] = useState(false);
-  const [scanPreset, setScanPreset] = useState('document'); // 스캔 프리셋
+  const [scanPreset, setScanPreset] = useState('document');
   const [users, setUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState('');
   
   const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
 
-  // 사용자 목록 조회
   useEffect(() => {
     fetchUsers();
-    // localStorage에서 마지막 선택한 사용자 불러오기
     const lastUserId = localStorage.getItem('lastSelectedUserId');
     if (lastUserId) {
       setSelectedUserId(lastUserId);
@@ -68,7 +65,6 @@ function UploadPage() {
           let width = img.width;
           let height = img.height;
 
-          // 비율 유지하면서 리사이징
           if (width > height) {
             if (width > maxWidth) {
               height = Math.round((height * maxWidth) / width);
@@ -87,7 +83,6 @@ function UploadPage() {
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
 
-          // Canvas를 Blob으로 변환
           canvas.toBlob(
             (blob) => {
               if (blob) {
@@ -100,8 +95,6 @@ function UploadPage() {
                   원본크기: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
                   압축크기: `${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`,
                   압축률: `${((1 - compressedFile.size / file.size) * 100).toFixed(1)}%`,
-                  원본해상도: `${img.width}x${img.height}`,
-                  압축해상도: `${width}x${height}`,
                 });
                 
                 resolve(compressedFile);
@@ -119,42 +112,58 @@ function UploadPage() {
     });
   };
 
-  // 파일 선택 처리
+  // 다중 파일 선택 처리
   const handleFileSelect = async (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      setCompressing(true);
-      setScanning(true);
-      setError(null);
+    const selectedFiles = Array.from(e.target.files);
+    if (selectedFiles.length === 0) return;
 
-      try {
-        // 1단계: 문서 스캔 (품질 향상)
-        console.log('📄 문서 스캔 시작:', scanPreset);
+    setCompressing(true);
+    setScanning(true);
+    setError(null);
+
+    try {
+      const processedFiles = [];
+      
+      for (const selectedFile of selectedFiles) {
+        console.log('📄 문서 스캔 시작:', scanPreset, selectedFile.name);
         const scannedBlob = await scanDocument(selectedFile, SCAN_PRESETS[scanPreset]);
         const scannedFile = new File([scannedBlob], selectedFile.name, {
           type: 'image/jpeg',
           lastModified: Date.now(),
         });
         
-        setScanning(false);
-        
-        // 2단계: 추가 압축 (크기 제한)
         const compressedFile = await compressImage(scannedFile);
-        setFile(compressedFile);
-
+        
+        // 미리보기 URL 생성
         const reader = new FileReader();
-        reader.onload = () => {
-          setPreview(reader.result);
-        };
-        reader.readAsDataURL(compressedFile);
-      } catch (error) {
-        console.error('❌ 이미지 처리 실패:', error);
-        setError('이미지 처리에 실패했습니다.');
-      } finally {
-        setCompressing(false);
-        setScanning(false);
+        const dataUrl = await new Promise((resolve) => {
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(compressedFile);
+        });
+        
+        processedFiles.push({
+          file: compressedFile,
+          preview: dataUrl,
+          id: Date.now() + Math.random(),
+        });
       }
+      
+      setFiles(prev => [...prev, ...processedFiles]);
+      setScanning(false);
+      
+      console.log(`✅ ${processedFiles.length}개 이미지 처리 완료`);
+    } catch (error) {
+      console.error('❌ 이미지 처리 실패:', error);
+      setError('이미지 처리에 실패했습니다.');
+    } finally {
+      setCompressing(false);
+      setScanning(false);
     }
+  };
+
+  // 개별 이미지 삭제
+  const handleRemoveFile = (id) => {
+    setFiles(prev => prev.filter(f => f.id !== id));
   };
 
   // 카메라 촬영
@@ -169,7 +178,7 @@ function UploadPage() {
 
   // 업로드 처리
   const handleUpload = async () => {
-    if (!file) {
+    if (files.length === 0) {
       setError('이미지를 선택해주세요.');
       return;
     }
@@ -190,31 +199,33 @@ function UploadPage() {
 
     try {
       const formData = new FormData();
-      formData.append('image', file);
+      
+      // 여러 이미지 추가
+      files.forEach((fileObj) => {
+        formData.append('images', fileObj.file);
+      });
+      
       formData.append('uploadedBy', selectedUser.name);
       formData.append('client_name', '');
       formData.append('site_name', '');
 
       console.log('📤 업로드 시작:', {
         uploadedBy: selectedUser.name,
-        fileName: file.name,
-        fileSize: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
+        fileCount: files.length,
+        totalSize: `${(files.reduce((sum, f) => sum + f.file.size, 0) / 1024 / 1024).toFixed(2)}MB`,
       });
 
       await workOrderAPI.upload(formData);
 
       console.log('✅ 업로드 성공!');
-      alert('작업지시서가 전송되었습니다!');
+      alert(`${files.length}장의 작업지시서가 전송되었습니다!`);
 
-      // localStorage에 마지막 선택한 사용자 저장
       localStorage.setItem('lastSelectedUserId', selectedUserId);
 
-      // 상태 초기화 (촬영 화면 유지)
-      setFile(null);
-      setPreview(null);
+      // 상태 초기화
+      setFiles([]);
       setError(null);
       
-      // 파일 입력 초기화
       if (fileInputRef.current) fileInputRef.current.value = '';
       if (cameraInputRef.current) cameraInputRef.current.value = '';
     } catch (error) {
@@ -227,8 +238,7 @@ function UploadPage() {
 
   // 취소
   const handleCancel = () => {
-    setFile(null);
-    setPreview(null);
+    setFiles([]);
     setError(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (cameraInputRef.current) cameraInputRef.current.value = '';
@@ -286,39 +296,40 @@ function UploadPage() {
             <option value="original">📷 원본 유지 (압축만)</option>
           </select>
           <p className={`form-hint ${scanning ? 'scanning' : ''}`}>
-            {scanning ? '🔄 문서 스캔 중...' : '📸 촬영 시 자동으로 문서 품질로 변환됩니다'}
+            {scanning ? '🔄 문서 스캔 중...' : '📸 여러 장을 선택할 수 있습니다'}
           </p>
         </div>
 
-        {/* 미리보기 영역 */}
-        {preview ? (
+        {/* 미리보기 영역 - 다중 이미지 */}
+        {files.length > 0 ? (
           <div className="preview-section">
-            <div className="preview-container">
-              <img src={preview} alt="미리보기" className="preview-image" />
-              {compressing && (
-                <div className="preview-overlay">
-                  <div className="spinner"></div>
-                  <p>이미지 처리 중...</p>
-                </div>
-              )}
+            <div className="preview-header">
+              <span className="preview-count">📷 {files.length}장 선택됨</span>
+              <span className="preview-size">
+                {(files.reduce((sum, f) => sum + f.file.size, 0) / 1024 / 1024).toFixed(2)}MB
+              </span>
             </div>
-            <div className="preview-info">
-              <div className="info-item">
-                <span className="info-label">파일명:</span>
-                <span className="info-value">{file?.name}</span>
-              </div>
-              <div className="info-item">
-                <span className="info-label">크기:</span>
-                <span className="info-value">
-                  {file ? `${(file.size / 1024 / 1024).toFixed(2)}MB` : '-'}
-                </span>
-              </div>
+            <div className="preview-grid">
+              {files.map((fileObj) => (
+                <div key={fileObj.id} className="preview-item">
+                  <img src={fileObj.preview} alt="미리보기" className="preview-thumb" />
+                  <button
+                    className="btn-remove"
+                    onClick={() => handleRemoveFile(fileObj.id)}
+                    disabled={uploading}
+                  >
+                    ✕
+                  </button>
+                  <div className="preview-name">{fileObj.file.name}</div>
+                </div>
+              ))}
             </div>
           </div>
         ) : (
           <div className="empty-preview">
             <div className="empty-icon">📷</div>
             <p className="empty-text">촬영하거나 이미지를 선택하세요</p>
+            <p className="empty-hint">여러 장을 한 번에 선택할 수 있습니다</p>
           </div>
         )}
 
@@ -332,26 +343,24 @@ function UploadPage() {
 
         {/* 액션 버튼 */}
         <div className="action-section">
-          {!preview ? (
-            <>
-              <button
-                className="btn-action btn-camera"
-                onClick={handleCameraCapture}
-                disabled={uploading || compressing}
-              >
-                <span className="btn-icon">📸</span>
-                <span className="btn-text">작업지시서 촬영</span>
-              </button>
-              <button
-                className="btn-action btn-gallery"
-                onClick={handleGallerySelect}
-                disabled={uploading || compressing}
-              >
-                <span className="btn-icon">🖼️</span>
-                <span className="btn-text">갤러리에서 선택</span>
-              </button>
-            </>
-          ) : (
+          <button
+            className="btn-action btn-camera"
+            onClick={handleCameraCapture}
+            disabled={uploading || compressing}
+          >
+            <span className="btn-icon">📸</span>
+            <span className="btn-text">작업지시서 촬영</span>
+          </button>
+          <button
+            className="btn-action btn-gallery"
+            onClick={handleGallerySelect}
+            disabled={uploading || compressing}
+          >
+            <span className="btn-icon">🖼️</span>
+            <span className="btn-text">갤러리에서 선택</span>
+          </button>
+          
+          {files.length > 0 && (
             <>
               <button
                 className="btn-action btn-upload"
@@ -366,7 +375,7 @@ function UploadPage() {
                 ) : (
                   <>
                     <span className="btn-icon">✓</span>
-                    <span className="btn-text">전송하기</span>
+                    <span className="btn-text">{files.length}장 전송하기</span>
                   </>
                 )}
               </button>
@@ -376,7 +385,7 @@ function UploadPage() {
                 disabled={uploading || compressing}
               >
                 <span className="btn-icon">✕</span>
-                <span className="btn-text">취소</span>
+                <span className="btn-text">모두 취소</span>
               </button>
             </>
           )}
@@ -390,12 +399,12 @@ function UploadPage() {
           </div>
           <div className="help-item">
             <span className="help-icon">📱</span>
-            <span className="help-text">전송 후 계속해서 촬영할 수 있습니다</span>
+            <span className="help-text">여러 장을 한 번에 선택하고 하나의 작업지시서로 전송됩니다</span>
           </div>
         </div>
       </div>
 
-      {/* 숨겨진 파일 입력 */}
+      {/* 숨겨진 파일 입력 - multiple 속성 추가 */}
       <input
         ref={cameraInputRef}
         type="file"
@@ -408,11 +417,12 @@ function UploadPage() {
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
         onChange={handleFileSelect}
         style={{ display: 'none' }}
       />
 
-      <style>{`
+      <style>{\`
         .upload-page {
           min-height: 100vh;
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -461,7 +471,7 @@ function UploadPage() {
         .upload-content {
           flex: 1;
           padding: 20px;
-          max-width: 600px;
+          max-width: 800px;
           width: 100%;
           margin: 0 auto;
           display: flex;
@@ -539,58 +549,87 @@ function UploadPage() {
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         }
 
-        .preview-container {
+        .preview-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+          padding-bottom: 12px;
+          border-bottom: 2px solid #f0f0f0;
+        }
+
+        .preview-count {
+          font-size: 16px;
+          font-weight: 700;
+          color: #333;
+        }
+
+        .preview-size {
+          font-size: 14px;
+          color: #666;
+        }
+
+        .preview-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+          gap: 12px;
+        }
+
+        .preview-item {
           position: relative;
-          width: 100%;
           aspect-ratio: 3 / 4;
           background: #f5f5f5;
           border-radius: 12px;
           overflow: hidden;
-          margin-bottom: 16px;
+          border: 2px solid #e0e0e0;
         }
 
-        .preview-image {
+        .preview-thumb {
           width: 100%;
           height: 100%;
-          object-fit: contain;
+          object-fit: cover;
         }
 
-        .preview-overlay {
+        .btn-remove {
           position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.7);
+          top: 8px;
+          right: 8px;
+          width: 32px;
+          height: 32px;
+          background: rgba(255, 59, 48, 0.9);
+          color: white;
+          border: none;
+          border-radius: 50%;
+          font-size: 18px;
+          cursor: pointer;
+          transition: all 0.3s;
           display: flex;
-          flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 12px;
+        }
+
+        .btn-remove:hover {
+          background: rgba(255, 59, 48, 1);
+          transform: scale(1.1);
+        }
+
+        .btn-remove:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .preview-name {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background: rgba(0, 0, 0, 0.7);
           color: white;
-        }
-
-        .preview-info {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .info-item {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .info-label {
-          font-weight: 600;
-          color: #666;
-          min-width: 60px;
-        }
-
-        .info-value {
-          color: #333;
-          word-break: break-all;
+          font-size: 11px;
+          padding: 4px 8px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .empty-preview {
@@ -608,6 +647,12 @@ function UploadPage() {
 
         .empty-text {
           font-size: 18px;
+          color: #666;
+          margin: 0 0 8px 0;
+        }
+
+        .empty-hint {
+          font-size: 14px;
           color: #999;
           margin: 0;
         }
@@ -692,15 +737,6 @@ function UploadPage() {
           font-size: 18px;
         }
 
-        .spinner {
-          width: 50px;
-          height: 50px;
-          border: 4px solid rgba(255, 255, 255, 0.3);
-          border-top: 4px solid white;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
-
         .spinner-small {
           width: 20px;
           height: 20px;
@@ -760,6 +796,10 @@ function UploadPage() {
             padding: 16px;
           }
 
+          .preview-grid {
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+          }
+
           .btn-action {
             padding: 16px;
             font-size: 16px;
@@ -775,7 +815,7 @@ function UploadPage() {
             padding: 40px 20px;
           }
         }
-      `}</style>
+      \`}</style>
     </div>
   );
 }
