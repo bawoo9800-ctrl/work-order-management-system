@@ -120,8 +120,8 @@ const HomePage = () => {
     }
   };
   
-  // 작업 유형 목록 (중복 제거)
-  const workTypes = [...new Set(workOrders.map(o => o.work_type).filter(Boolean))];
+  // 작업 유형 목록 (고정 목록 사용)
+  const workTypes = ['FSD', 'SD', '기타'];
   
   // 필터링된 작업지시서
   const filteredWorkOrders = workOrders.filter(order => {
