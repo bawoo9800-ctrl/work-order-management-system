@@ -13,6 +13,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import ImageEditor from './ImageEditor';
 
 function ImageGalleryViewer({ 
   images = [], 
@@ -31,6 +32,7 @@ function ImageGalleryViewer({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [loading, setLoading] = useState(true);
   const [showInfo, setShowInfo] = useState(true);
+  const [showEditor, setShowEditor] = useState(false);
   
   // 자동완성 상태
   const [showAutocomplete, setShowAutocomplete] = useState(false);
@@ -243,6 +245,43 @@ function ImageGalleryViewer({
     }
   };
   
+  // 편집된 이미지 저장
+  const handleSaveEditedImage = async (blob) => {
+    if (!workOrder) {
+      alert('작업지시서 정보가 없습니다.');
+      return;
+    }
+    
+    try {
+      // FormData 생성
+      const formData = new FormData();
+      formData.append('image', blob, 'edited_image.jpg');
+      formData.append('workOrderId', workOrder.id);
+      
+      // 서버에 업로드 (TODO: API 엔드포인트 추가 필요)
+      // const response = await fetch('/api/v1/work-orders/upload-edited-image', {
+      //   method: 'POST',
+      //   body: formData,
+      // });
+      
+      // 임시: 로컬에서 다운로드
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `보정된_작업지시서_${workOrder.client_name || 'unknown'}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      setShowEditor(false);
+      alert('이미지가 보정되어 다운로드되었습니다!');
+    } catch (error) {
+      console.error('❌ 이미지 저장 실패:', error);
+      alert('이미지 저장에 실패했습니다.');
+    }
+  };
+  
   // 작업지시서 저장
   const handleSaveWorkOrder = async () => {
     if (!workOrder || !onUpdateWorkOrder) return;
@@ -390,6 +429,9 @@ function ImageGalleryViewer({
             </button>
             <button className="control-btn" onClick={handleRotate} title="회전 (R)">
               ↻
+            </button>
+            <button className="control-btn" onClick={() => setShowEditor(true)} title="이미지 보정">
+              ✨
             </button>
             <button className="control-btn" onClick={handleDownload} title="다운로드">
               ⬇
@@ -935,6 +977,15 @@ function ImageGalleryViewer({
           }
         }
       `}</style>
+      
+      {/* 이미지 편집기 */}
+      {showEditor && (
+        <ImageEditor
+          imageUrl={currentImage}
+          onSave={handleSaveEditedImage}
+          onCancel={() => setShowEditor(false)}
+        />
+      )}
     </div>
   );
 }
