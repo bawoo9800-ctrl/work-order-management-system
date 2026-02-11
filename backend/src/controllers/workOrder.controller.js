@@ -19,7 +19,7 @@ import * as classificationService from '../services/classification.service.js';
 import logger from '../utils/logger.js';
 import { AppError } from '../middleware/error.middleware.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
-import { notifyWorkOrderCreated, notifyWorkOrderUpdated, notifyWorkOrderDeleted } from '../socket/socket.js';
+import { notifyWorkOrderCreated } from '../socket/socket.js';
 
 /**
  * 작업지시서 업로드 및 처리 (수동 분류)
@@ -248,17 +248,8 @@ export const updateWorkOrder = asyncHandler(async (req, res) => {
     throw new AppError('작업지시서를 찾을 수 없습니다.', 404);
   }
 
-  // WebSocket 실시간 알림 전송
-  try {
-    notifyWorkOrderUpdated({
-      id: parseInt(id),
-      client_name: filteredData.client_name || '거래처 정보 수정'
-    });
-  } catch (notifyError) {
-    logger.error('WebSocket 알림 전송 실패 (작업지시서는 정상 수정됨)', {
-      error: notifyError.message
-    });
-  }
+  // 수정 알림 제거 (전송 알림만 유지)
+  // notifyWorkOrderUpdated() 호출 안 함
 
   res.json({
     success: true,
@@ -280,26 +271,14 @@ export const deleteWorkOrder = asyncHandler(async (req, res) => {
   logger.info('작업지시서 삭제 요청', { id });
 
   try {
-    // 삭제 전에 작업지시서 정보 조회 (알림용)
-    const workOrder = await WorkOrderModel.getWorkOrderById(parseInt(id));
-    
     const affectedRows = await WorkOrderModel.deleteWorkOrder(parseInt(id));
 
     if (affectedRows === 0) {
       throw new AppError('작업지시서를 찾을 수 없습니다.', 404);
     }
 
-    // WebSocket 실시간 알림 전송
-    try {
-      notifyWorkOrderDeleted({
-        id: parseInt(id),
-        client_name: workOrder?.client_name || '거래처 미지정'
-      });
-    } catch (notifyError) {
-      logger.error('WebSocket 알림 전송 실패 (작업지시서는 정상 삭제됨)', {
-        error: notifyError.message
-      });
-    }
+    // 삭제 알림 제거 (전송 알림만 유지)
+    // notifyWorkOrderDeleted() 호출 안 함
 
     logger.info('작업지시서 삭제 완료', { id, affectedRows });
 
