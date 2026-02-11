@@ -503,19 +503,6 @@ const HomePage = () => {
                         })}
                       </span>
                     </div>
-                    
-                    {/* 추가촬영 버튼 */}
-                    <button 
-                      className="btn-add-image"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddImageClick(order.id);
-                      }}
-                      disabled={uploadingId === order.id}
-                      title="이미지 추가"
-                    >
-                      {uploadingId === order.id ? '⏳ 업로드 중...' : '📸 추가촬영'}
-                    </button>
                   </div>
                 </div>
               ))
