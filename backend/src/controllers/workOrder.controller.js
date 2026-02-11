@@ -473,60 +473,106 @@ export const processWorkOrderImage = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const startTime = Date.now();
 
-  logger.info('이미지 처리 요청', { id, body: req.body });
+  try {
+    logger.info('이미지 처리 요청', { id, body: req.body });
 
-  // 1. 작업지시서 조회
-  const workOrder = await WorkOrderModel.getWorkOrderById(parseInt(id));
-  if (!workOrder) {
-    throw new AppError('작업지시서를 찾을 수 없습니다.', 404);
+    // 1. 작업지시서 조회
+    const workOrder = await WorkOrderModel.getWorkOrderById(parseInt(id));
+    if (!workOrder) {
+      throw new AppError('작업지시서를 찾을 수 없습니다.', 404);
+    }
+
+    // 2. 원본 이미지 경로 확인
+    const originalPath = workOrder.storage_path;
+    if (!originalPath) {
+      throw new AppError('원본 이미지를 찾을 수 없습니다.', 404);
+    }
+
+    logger.info('원본 이미지 경로', { originalPath });
+
+    // 파일 존재 여부 확인
+    const fs = await import('fs/promises');
+    try {
+      await fs.access(originalPath);
+      logger.info('✅ 파일 접근 가능:', originalPath);
+    } catch (err) {
+      logger.error('❌ 파일 접근 불가:', { originalPath, error: err.message });
+      throw new AppError(`원본 이미지 파일을 찾을 수 없습니다: ${originalPath}`, 404);
+    }
+
+    // 3. 이미지 처리 옵션
+    const options = {
+      enablePerspective: req.body.enablePerspective !== false,
+      enableAutoCrop: req.body.enableAutoCrop !== false,
+      enableScan: req.body.enableScan !== false,
+      enableThreshold: req.body.enableThreshold === true,
+      enableBackgroundRemoval: req.body.enableBackgroundRemoval === true,
+      brightness: parseFloat(req.body.brightness) || 1.1,
+      contrast: parseFloat(req.body.contrast) || 1.3,
+      threshold: parseInt(req.body.threshold) || 128,
+    };
+
+    logger.info('이미지 처리 옵션:', options);
+
+    // 4. 이미지 처리 실행
+    logger.info('📸 이미지 처리 시작...');
+    const { buffer, processingTime } = await imageProcessingService.processDocument(
+      originalPath,
+      options
+    );
+    logger.info('✅ 이미지 처리 완료:', { processingTime });
+
+    // 5. 보정된 이미지 저장
+    const uploadPath = process.env.UPLOAD_PATH || '/volume1/web/work-order-management-system/uploads';
+    logger.info('💾 보정된 이미지 저장 시작:', { uploadPath });
+    
+    const savedFile = await imageProcessingService.saveProcessedImage(
+      buffer,
+      workOrder.original_filename,
+      uploadPath
+    );
+    logger.info('✅ 보정된 이미지 저장 완료:', savedFile);
+
+    // 6. 데이터베이스 업데이트 (storage_path를 보정된 이미지로 변경)
+    await WorkOrderModel.updateWorkOrder(parseInt(id), {
+      storage_path: savedFile.path,
+      processing_time_ms: processingTime,
+    });
+
+    const totalTime = Date.now() - startTime;
+
+    logger.info('✅ 이미지 처리 전체 완료', {
+      id,
+      originalPath,
+      newPath: savedFile.path,
+      fileSize: savedFile.size,
+      processingTime,
+      totalTime,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: '이미지 처리가 완료되었습니다.',
+        workOrderId: id,
+        originalPath,
+        processedPath: savedFile.path,
+        processedFilename: savedFile.filename,
+        fileSize: savedFile.size,
+        processingTime,
+        totalTime,
+      },
+      error: null,
+    });
+  } catch (error) {
+    logger.error('❌ 이미지 처리 실패:', {
+      id,
+      error: error.message,
+      stack: error.stack,
+    });
+    throw error;
   }
-
-  // 2. 원본 이미지 경로 확인
-  const originalPath = workOrder.storage_path;
-  if (!originalPath) {
-    throw new AppError('원본 이미지를 찾을 수 없습니다.', 404);
-  }
-
-  logger.info('원본 이미지 경로', { originalPath });
-
-  // 3. 이미지 처리 옵션
-  const options = {
-    enablePerspective: req.body.enablePerspective !== false,
-    enableAutoCrop: req.body.enableAutoCrop !== false,
-    enableScan: req.body.enableScan !== false,
-    enableThreshold: req.body.enableThreshold === true,
-    enableBackgroundRemoval: req.body.enableBackgroundRemoval === true,
-    brightness: parseFloat(req.body.brightness) || 1.1,
-    contrast: parseFloat(req.body.contrast) || 1.3,
-    threshold: parseInt(req.body.threshold) || 128,
-  };
-
-  // 4. 이미지 처리 실행
-  const { buffer, processingTime } = await imageProcessingService.processDocument(
-    originalPath,
-    options
-  );
-
-  // 5. 보정된 이미지 저장
-  const uploadPath = process.env.UPLOAD_PATH || '/volume1/web/work-order-management-system/uploads';
-  const savedFile = await imageProcessingService.saveProcessedImage(
-    buffer,
-    workOrder.original_filename,
-    uploadPath
-  );
-
-  // 6. 데이터베이스 업데이트 (storage_path를 보정된 이미지로 변경)
-  await WorkOrderModel.updateWorkOrder(parseInt(id), {
-    storage_path: savedFile.path,
-    processing_time_ms: processingTime,
-  });
-
-  const totalTime = Date.now() - startTime;
-
-  logger.info('이미지 처리 완료', {
-    id,
-    originalPath,
-    newPath: savedFile.path,
+});
     fileSize: savedFile.size,
     processingTime,
     totalTime,
