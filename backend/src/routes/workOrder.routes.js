@@ -9,15 +9,15 @@
 
 import express from 'express';
 import * as workOrderController from '../controllers/workOrder.controller.js';
-import { uploadSingle, handleMulterError } from '../middleware/upload.middleware.js';
+import { uploadSingle, uploadMultiple, handleMulterError } from '../middleware/upload.middleware.js';
 
 const router = express.Router();
 
 /**
  * POST /api/v1/work-orders/upload
- * 작업지시서 업로드 및 처리 (이미지 → OCR → 자동 분류)
+ * 작업지시서 업로드 및 처리 (단일 또는 다중 이미지 → OCR → 자동 분류)
  */
-router.post('/upload', uploadSingle, handleMulterError, workOrderController.uploadWorkOrder);
+router.post('/upload', uploadMultiple, handleMulterError, workOrderController.uploadWorkOrder);
 
 /**
  * GET /api/v1/work-orders
@@ -92,9 +92,9 @@ router.post('/:id/reclassify', workOrderController.reclassifyWorkOrder);
 router.post('/:id/upload-edited-image', uploadSingle, handleMulterError, workOrderController.uploadEditedImage);
 
 /**
- * POST /api/v1/work-orders/:id/add-image
- * 작업지시서에 이미지 추가 (추가촬영)
+ * POST /api/v1/work-orders/:id/add-images
+ * 작업지시서에 이미지 추가 (추가촬영 - 다중 지원)
  */
-router.post('/:id/add-image', uploadSingle, handleMulterError, workOrderController.addImageToWorkOrder);
+router.post('/:id/add-images', uploadMultiple, handleMulterError, workOrderController.addImagesToWorkOrder);
 
 export default router;

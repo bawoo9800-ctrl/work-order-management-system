@@ -23,19 +23,20 @@ import { asyncHandler } from '../middleware/error.middleware.js';
 import { notifyWorkOrderCreated } from '../socket/socket.js';
 
 /**
- * 작업지시서 업로드 및 처리 (수동 분류)
+ * 작업지시서 업로드 및 처리 (수동 분류 - 다중 이미지 지원)
  * POST /api/v1/work-orders/upload
- * Body: clientName (필수), siteName (선택), uploadedBy (필수)
+ * Body: clientName (선택), siteName (선택), uploadedBy (필수)
+ * Files: images[] (다중 이미지)
  */
 export const uploadWorkOrder = asyncHandler(async (req, res) => {
   const startTime = Date.now();
 
-  // 1) 파일 검증
-  if (!req.file) {
+  // 1) 파일 검증 (다중 또는 단일)
+  const files = req.files || (req.file ? [req.file] : []);
+  
+  if (files.length === 0) {
     throw new AppError('이미지 파일이 필요합니다.', 400);
   }
-
-  const { buffer, originalname, mimetype } = req.file;
   
   // 수동 입력 필드
   const { clientName, siteName, uploadedBy } = req.body;
@@ -45,30 +46,46 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
     throw new AppError('전송자명은 필수입니다.', 400);
   }
 
-  logger.info('작업지시서 업로드 시작', {
-    originalFilename: originalname,
-    fileSize: buffer.length,
-    mimeType: mimetype,
+  logger.info(`다중 이미지 업로드 시작: ${files.length}장`, {
+    fileCount: files.length,
     clientName: clientName || '(없음)',
     siteName: siteName || '(없음)',
     uploadedBy: uploadedBy.trim(),
-    requestBody: req.body,
   });
 
   try {
-    // 2) 이미지 처리 및 저장
-    const imageResult = await imageProcessor.processAndSaveImage(buffer, originalname);
+    // 2) 모든 이미지 처리 및 저장
+    const imageResults = [];
+    
+    for (const file of files) {
+      const imageResult = await imageProcessor.processAndSaveImage(file.buffer, file.originalname);
+      imageResults.push(imageResult);
+    }
 
-    // 3) 작업지시서 DB 저장 (수동 분류)
+    // 3) 첫 번째 이미지로 작업지시서 생성
+    const firstImage = imageResults[0];
+    
+    // images 필드: 여러 이미지 경로를 JSON 배열로 저장
+    const imagesJson = JSON.stringify(imageResults.map(img => ({
+      uuid: img.uuid,
+      storage_path: img.storagePath,
+      original_filename: img.originalFilename,
+      file_size: img.fileSize,
+      mime_type: img.mimeType,
+      image_width: img.imageWidth,
+      image_height: img.imageHeight,
+    })));
+
     const workOrderData = {
-      uuid: imageResult.uuid,
-      original_filename: imageResult.originalFilename,
-      storage_path: imageResult.storagePath,
-      file_size: imageResult.fileSize,
-      mime_type: imageResult.mimeType,
-      image_width: imageResult.imageWidth,
-      image_height: imageResult.imageHeight,
-      client_id: null, // 수동 입력이므로 null
+      uuid: firstImage.uuid,
+      original_filename: firstImage.originalFilename,
+      storage_path: firstImage.storagePath,
+      file_size: firstImage.fileSize,
+      mime_type: firstImage.mimeType,
+      image_width: firstImage.imageWidth,
+      image_height: firstImage.imageHeight,
+      images: imagesJson, // 다중 이미지 정보
+      client_id: null,
       client_name: clientName?.trim() || null,
       site_name: siteName?.trim() || null,
       classification_method: 'manual',
@@ -89,6 +106,7 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
       uploaded_by: workOrderData.uploaded_by,
       client_name: workOrderData.client_name,
       site_name: workOrderData.site_name,
+      imageCount: imageResults.length,
     });
 
     const workOrderId = await WorkOrderModel.createWorkOrder(workOrderData);
@@ -111,11 +129,12 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
       success: true,
       data: {
         id: workOrderId,
-        uuid: imageResult.uuid,
-        originalFilename: imageResult.originalFilename,
+        uuid: firstImage.uuid,
+        originalFilename: firstImage.originalFilename,
         clientName: clientName?.trim() || null,
         siteName: siteName?.trim() || null,
         uploadedBy: uploadedBy.trim(),
+        imageCount: imageResults.length,
         processingTimeMs: Date.now() - startTime,
       },
       error: null,
@@ -123,15 +142,15 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
 
     logger.info('작업지시서 생성 완료', {
       workOrderId,
-      uuid: imageResult.uuid,
-      clientName,
+      uuid: firstImage.uuid,
+      imageCount: imageResults.length,
       processingTime: Date.now() - startTime,
     });
   } catch (error) {
     logger.error('작업지시서 처리 실패', {
       error: error.message,
       stack: error.stack,
-      originalFilename: originalname,
+      fileCount: files.length,
     });
     throw error;
   }
@@ -721,4 +740,101 @@ export const processWorkOrderImage = asyncHandler(async (req, res) => {
     });
     throw error;
   }
+});
+
+/**
+ * 작업지시서에 여러 이미지 추가 (추가촬영 - 다중)
+ * POST /api/v1/work-orders/:id/add-images
+ * 동일한 거래처의 작업지시서에 여러 추가 이미지 업로드
+ */
+export const addImagesToWorkOrder = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const startTime = Date.now();
+
+  // 파일 검증 (다중 또는 단일)
+  const files = req.files || (req.file ? [req.file] : []);
+  
+  if (files.length === 0) {
+    throw new AppError('이미지 파일이 필요합니다.', 400);
+  }
+
+  logger.info(`추가 이미지 업로드 시작: ${files.length}장`, {
+    workOrderId: id,
+    fileCount: files.length,
+  });
+
+  // 작업지시서 조회
+  const workOrder = await WorkOrderModel.getWorkOrderById(parseInt(id));
+  if (!workOrder) {
+    throw new AppError('작업지시서를 찾을 수 없습니다.', 404);
+  }
+
+  // 기존 images JSON 배열 파싱
+  let images = [];
+  try {
+    images = workOrder.images ? JSON.parse(workOrder.images) : [];
+  } catch (e) {
+    logger.error('images JSON 파싱 실패', { error: e.message });
+    images = [];
+  }
+
+  // 첫 번째 이미지가 없는 경우 (레거시 데이터)
+  if (images.length === 0 && workOrder.storage_path) {
+    images.push({
+      uuid: workOrder.uuid,
+      storage_path: workOrder.storage_path,
+      original_filename: workOrder.original_filename,
+      file_size: workOrder.file_size,
+      mime_type: workOrder.mime_type,
+      image_width: workOrder.image_width,
+      image_height: workOrder.image_height,
+    });
+  }
+
+  // 모든 이미지 처리 및 저장
+  const newImages = [];
+  for (const file of files) {
+    const imageResult = await imageProcessor.processAndSaveImage(file.buffer, file.originalname);
+    
+    const newImage = {
+      uuid: imageResult.uuid,
+      storage_path: imageResult.storagePath,
+      original_filename: imageResult.originalFilename,
+      file_size: imageResult.fileSize,
+      mime_type: imageResult.mimeType,
+      image_width: imageResult.imageWidth,
+      image_height: imageResult.imageHeight,
+    };
+    
+    images.push(newImage);
+    newImages.push(newImage);
+  }
+
+  // 데이터베이스 업데이트
+  await WorkOrderModel.updateWorkOrder(parseInt(id), {
+    images: JSON.stringify(images),
+    updated_at: new Date(),
+  });
+
+  const processingTime = Date.now() - startTime;
+
+  logger.info('추가 이미지 업로드 완료', {
+    workOrderId: id,
+    addedCount: newImages.length,
+    totalImages: images.length,
+    processingTime,
+  });
+
+  res.json({
+    success: true,
+    data: {
+      message: `${newImages.length}장의 이미지가 추가되었습니다. (총 ${images.length}장)`,
+      workOrderId: id,
+      addedCount: newImages.length,
+      totalCount: images.length,
+      images: images,
+      processingTime,
+    },
+    error: null,
+  });
 });
