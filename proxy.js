@@ -20,8 +20,11 @@ const PORT = 8080;
 app.use('/api', createProxyMiddleware({
   target: 'http://localhost:3200',
   changeOrigin: true,
+  pathRewrite: {
+    '^/api': '/api' // 경로 유지
+  },
   onProxyReq: (proxyReq, req, res) => {
-    console.log(`[Proxy] ${req.method} ${req.path} → http://localhost:3200`);
+    console.log(`[Proxy] ${req.method} ${req.originalUrl} → http://localhost:3200${req.url}`);
   },
   onError: (err, req, res) => {
     console.error(`[Proxy Error] ${req.method} ${req.path}:`, err.message);
@@ -40,8 +43,11 @@ app.use('/socket.io', createProxyMiddleware({
   target: 'http://localhost:3200',
   changeOrigin: true,
   ws: true, // WebSocket 지원
+  pathRewrite: {
+    '^/socket.io': '/socket.io' // 경로 유지
+  },
   onProxyReq: (proxyReq, req, res) => {
-    console.log(`[Proxy] WebSocket ${req.path} → http://localhost:3200`);
+    console.log(`[Proxy] WebSocket ${req.originalUrl} → http://localhost:3200${req.url}`);
   },
   onError: (err, req, res) => {
     console.error(`[Proxy Error] WebSocket ${req.path}:`, err.message);
