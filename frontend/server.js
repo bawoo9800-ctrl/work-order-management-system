@@ -35,8 +35,8 @@ app.use(express.static(join(__dirname, 'dist'), {
   }
 }));
 
-// SPA 폴백: 정적 파일이 없으면 index.html 반환
-app.get('*', (req, res) => {
+// SPA 폴백: API 요청이 아닌 모든 GET 요청에 대해 index.html 반환
+app.get(/^(?!\/api).*$/, (req, res) => {
   res.sendFile(join(__dirname, 'dist', 'index.html'));
 });
 
