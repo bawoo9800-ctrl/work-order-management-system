@@ -179,6 +179,8 @@ export const createWorkOrder = async (workOrderData) => {
     mime_type,
     image_width,
     image_height,
+    images = null,
+    image_count = 1,
     client_id = null,
     client_name = null,
     site_name = null,
