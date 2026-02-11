@@ -126,6 +126,12 @@ export const workOrderAPI = {
     });
     return response.data;
   },
+
+  // 이미지 처리 (서버 측 고급 보정)
+  processImage: async (id, options = {}) => {
+    const response = await apiClient.post(`/api/v1/work-orders/${id}/process-image`, options);
+    return response.data;
+  },
 };
 
 /**

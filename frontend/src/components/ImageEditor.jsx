@@ -4,8 +4,9 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
+import { workOrderAPI } from '../services/api';
 
-export default function ImageEditor({ imageUrl, onSave, onCancel }) {
+export default function ImageEditor({ imageUrl, onSave, onCancel, workOrderId }) {
   const canvasRef = useRef(null);
   const [originalImage, setOriginalImage] = useState(null);
   const [processing, setProcessing] = useState(false);
@@ -100,6 +101,47 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
       }
       setProcessing(false);
     }, 100);
+  };
+
+  // 서버 측 고급 보정
+  const handleServerProcessing = async () => {
+    if (!workOrderId) {
+      alert('작업지시서 ID가 없습니다.');
+      return;
+    }
+
+    if (!confirm('서버에서 고급 이미지 보정을 수행하시겠습니까?\n\n✅ 원근 보정\n✅ 자동 자르기\n✅ 문서 스캔 효과\n\n처리 시간: 약 5-10초')) {
+      return;
+    }
+
+    setProcessing(true);
+
+    try {
+      const response = await workOrderAPI.processImage(workOrderId, {
+        enablePerspective: true,
+        enableAutoCrop: true,
+        enableScan: true,
+        enableThreshold: false,
+        enableBackgroundRemoval: false,
+        brightness: 1.1,
+        contrast: 1.3,
+        threshold: 128,
+      });
+
+      console.log('✅ 서버 보정 완료:', response);
+
+      alert(`✅ 이미지 보정이 완료되었습니다!\n\n처리 시간: ${response.data.processingTime}ms\n파일 크기: ${(response.data.fileSize / 1024).toFixed(2)} KB`);
+
+      // 보정된 이미지로 새로고침
+      if (onSave) {
+        onSave();
+      }
+    } catch (error) {
+      console.error('❌ 서버 보정 실패:', error);
+      alert('이미지 보정에 실패했습니다.\n' + (error.response?.data?.message || error.message));
+    } finally {
+      setProcessing(false);
+    }
   };
   
   // 흑백 변환
@@ -364,6 +406,14 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
               disabled={processing}
             >
               ✨ 자동 보정 (권장)
+            </button>
+            <button 
+              className="btn btn-success"
+              onClick={handleServerProcessing}
+              disabled={processing}
+              style={{ marginLeft: '10px' }}
+            >
+              🚀 서버 고급 보정 (AI)
             </button>
             <button 
               className="btn btn-secondary btn-small"

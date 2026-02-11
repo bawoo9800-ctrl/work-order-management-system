@@ -85,4 +85,10 @@ router.delete('/:id/permanent', workOrderController.permanentlyDeleteWorkOrder);
  */
 router.post('/:id/reclassify', workOrderController.reclassifyWorkOrder);
 
+/**
+ * POST /api/v1/work-orders/:id/process-image
+ * 이미지 처리 (서버 측 고급 보정)
+ */
+router.post('/:id/process-image', workOrderController.processWorkOrderImage);
+
 export default router;

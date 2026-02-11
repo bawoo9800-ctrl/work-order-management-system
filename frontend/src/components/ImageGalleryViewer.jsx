@@ -982,6 +982,7 @@ function ImageGalleryViewer({
       {showEditor && (
         <ImageEditor
           imageUrl={currentImage}
+          workOrderId={workOrder?.id}
           onSave={handleSaveEditedImage}
           onCancel={() => setShowEditor(false)}
         />

@@ -16,6 +16,7 @@ import * as WorkOrderModel from '../models/workOrder.model.js';
 import * as imageProcessor from '../utils/imageProcessor.js';
 import * as ocrService from '../services/ocr.service.js';
 import * as classificationService from '../services/classification.service.js';
+import imageProcessingService from '../services/imageProcessing.service.js';
 import logger from '../utils/logger.js';
 import { AppError } from '../middleware/error.middleware.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
@@ -449,6 +450,99 @@ export const permanentlyDeleteWorkOrder = asyncHandler(async (req, res) => {
     success: true,
     data: {
       message: '작업지시서가 영구적으로 삭제되었습니다.',
+    },
+    error: null,
+  });
+});
+
+/**
+ * 이미지 처리 (서버 측 고급 보정)
+ * POST /api/v1/work-orders/:id/process-image
+ * Body: {
+ *   enablePerspective: boolean,
+ *   enableAutoCrop: boolean,
+ *   enableScan: boolean,
+ *   enableThreshold: boolean,
+ *   enableBackgroundRemoval: boolean,
+ *   brightness: number,
+ *   contrast: number,
+ *   threshold: number
+ * }
+ */
+export const processWorkOrderImage = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const startTime = Date.now();
+
+  logger.info('이미지 처리 요청', { id, body: req.body });
+
+  // 1. 작업지시서 조회
+  const workOrder = await WorkOrderModel.getWorkOrderById(parseInt(id));
+  if (!workOrder) {
+    throw new AppError('작업지시서를 찾을 수 없습니다.', 404);
+  }
+
+  // 2. 원본 이미지 경로 확인
+  const originalPath = workOrder.storage_path;
+  if (!originalPath) {
+    throw new AppError('원본 이미지를 찾을 수 없습니다.', 404);
+  }
+
+  logger.info('원본 이미지 경로', { originalPath });
+
+  // 3. 이미지 처리 옵션
+  const options = {
+    enablePerspective: req.body.enablePerspective !== false,
+    enableAutoCrop: req.body.enableAutoCrop !== false,
+    enableScan: req.body.enableScan !== false,
+    enableThreshold: req.body.enableThreshold === true,
+    enableBackgroundRemoval: req.body.enableBackgroundRemoval === true,
+    brightness: parseFloat(req.body.brightness) || 1.1,
+    contrast: parseFloat(req.body.contrast) || 1.3,
+    threshold: parseInt(req.body.threshold) || 128,
+  };
+
+  // 4. 이미지 처리 실행
+  const { buffer, processingTime } = await imageProcessingService.processDocument(
+    originalPath,
+    options
+  );
+
+  // 5. 보정된 이미지 저장
+  const uploadPath = process.env.UPLOAD_PATH || '/volume1/web/work-order-management-system/uploads';
+  const savedFile = await imageProcessingService.saveProcessedImage(
+    buffer,
+    workOrder.original_filename,
+    uploadPath
+  );
+
+  // 6. 데이터베이스 업데이트 (storage_path를 보정된 이미지로 변경)
+  await WorkOrderModel.updateWorkOrder(parseInt(id), {
+    storage_path: savedFile.path,
+    processing_time_ms: processingTime,
+  });
+
+  const totalTime = Date.now() - startTime;
+
+  logger.info('이미지 처리 완료', {
+    id,
+    originalPath,
+    newPath: savedFile.path,
+    fileSize: savedFile.size,
+    processingTime,
+    totalTime,
+  });
+
+  res.json({
+    success: true,
+    data: {
+      message: '이미지 처리가 완료되었습니다.',
+      workOrderId: id,
+      originalPath,
+      processedPath: savedFile.path,
+      processedFilename: savedFile.filename,
+      fileSize: savedFile.size,
+      processingTime,
+      totalTime,
     },
     error: null,
   });
