@@ -181,7 +181,7 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
           right: 0;
           bottom: 0;
           background: rgba(0, 0, 0, 0.95);
-          z-index: 10000;
+          z-index: 10002;
           display: flex;
           flex-direction: column;
         }
