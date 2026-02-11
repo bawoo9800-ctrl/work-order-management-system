@@ -68,23 +68,34 @@ const HomePage = () => {
     return () => window.removeEventListener('workOrderUpdate', handleWorkOrderUpdate);
   }, [selectedDate]);
   
-  // 작업지시서 조회
+  // 작업지시서 조회 (날짜 또는 전체)
   const fetchWorkOrdersByDate = async (date) => {
     try {
       setLoading(true);
-      const startDate = date;
-      const endDate = date;
-      
-      const params = { startDate, endDate };
+      const params = date ? { startDate: date, endDate: date } : {};
       const response = await workOrderAPI.list(params);
       
       const orders = response.data?.workOrders || response.workOrders || [];
       setWorkOrders(orders);
-      console.log(`📋 ${date} 작업지시서:`, orders.length);
+      console.log(date ? `📋 ${date} 작업지시서:` : '📋 전체 작업지시서:', orders.length);
     } catch (error) {
       console.error('❌ 작업지시서 로드 실패:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // 거래처 검색 핸들러
+  const handleSearchChange = (value) => {
+    setSearchQuery(value);
+    
+    // 검색어가 있으면 전체 내역 조회, 없으면 당일 날짜로 복귀
+    if (value.trim()) {
+      // 전체 내역 조회 (날짜 필터 없음)
+      fetchWorkOrdersByDate(null);
+    } else {
+      // 검색어 없으면 당일로 복귀
+      fetchWorkOrdersByDate(selectedDate);
     }
   };
   
@@ -137,6 +148,8 @@ const HomePage = () => {
       endDate: '',
     });
     setSearchQuery('');
+    // 당일로 복귀
+    fetchWorkOrdersByDate(selectedDate);
   };
   
   // 날짜 변경
@@ -243,14 +256,14 @@ const HomePage = () => {
               <input
                 type="text"
                 className="search-input"
-                placeholder="🔍 거래처 검색... (예: 삼성, 현대)"
+                placeholder="🔍 거래처 검색... (예: 삼성, 현대) - 전체 내역 검색"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
               />
               {searchQuery && (
                 <button 
                   className="clear-btn"
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => handleSearchChange('')}
                 >
                   ✕
                 </button>
