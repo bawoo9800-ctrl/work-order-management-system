@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 5173;
+const PORT = process.env.PORT || 9000;
 
 // Gzip 압축
 app.use(compression());
