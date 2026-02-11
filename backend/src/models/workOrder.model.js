@@ -197,10 +197,10 @@ export const createWorkOrder = async (workOrderData) => {
   const sql = `
     INSERT INTO work_orders (
       uuid, original_filename, storage_path, file_size_bytes, mime_type,
-      image_width, image_height, client_id, client_name, site_name,
+      image_width, image_height, images, image_count, client_id, client_name, site_name,
       classification_method, confidence_score, reasoning, ocr_text, work_date, 
       status, api_cost_usd, processing_time_ms, uploaded_by, uploaded_from
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const params = [
@@ -211,6 +211,8 @@ export const createWorkOrder = async (workOrderData) => {
     mime_type,
     image_width,
     image_height,
+    images || null, // ✅ images JSON 추가
+    image_count || 1, // ✅ image_count 추가
     client_id,
     client_name,
     site_name,
@@ -256,6 +258,8 @@ export const updateWorkOrder = async (id, updateData) => {
     'site_name',
     'work_type',
     'memo',
+    'images', // ✅ 추가
+    'image_count', // ✅ 추가
     'classification_method',
     'confidence_score',
     'reasoning',
