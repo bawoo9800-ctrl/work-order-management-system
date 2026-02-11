@@ -197,8 +197,16 @@ const HomePage = () => {
       }];
     }
     
-    // 이미지 URL 배열 생성
-    const imageUrls = images.map((img) => getImageUrl({...order, storage_path: img.path}));
+    // 이미지 URL 배열 생성 (캐시 키를 storage_path로 사용)
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    const imageUrls = images.map((img) => {
+      const storagePath = img.path;
+      if (storagePath.startsWith('/uploads/')) {
+        return `${baseUrl}${storagePath}`;
+      } else {
+        return `${baseUrl}/uploads/${storagePath}`;
+      }
+    });
     
     setZoomedImage(imageUrls[0]); // 첫 번째 이미지
     setZoomedOrder({...order, imageUrls}); // 전체 이미지 URL 배열 추가
