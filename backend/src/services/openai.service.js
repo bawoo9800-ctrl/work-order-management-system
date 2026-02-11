@@ -15,12 +15,24 @@ import fs from 'fs';
 import logger from '../utils/logger.js';
 
 /**
- * OpenAI 클라이언트 초기화
+ * OpenAI 클라이언트 초기화 (선택적)
  */
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL,
-});
+let client = null;
+
+const getClient = () => {
+  if (!client && process.env.OPENAI_API_KEY) {
+    client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      baseURL: process.env.OPENAI_BASE_URL,
+    });
+  }
+  
+  if (!client) {
+    throw new Error('OpenAI API 키가 설정되지 않았습니다. AI 분석 기능을 사용할 수 없습니다.');
+  }
+  
+  return client;
+};
 
 /**
  * 이미지를 Base64로 인코딩
@@ -96,7 +108,7 @@ ${clientList || '(거래처 정보 없음)'}
 - 날짜는 반드시 YYYY-MM-DD 형식으로 변환하세요.`;
 
     // GPT-4o Vision API 호출
-    const response = await client.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: process.env.OPENAI_MODEL_VISION || 'gpt-4o',
       messages: [
         {
@@ -236,7 +248,7 @@ ${clientList || '(거래처 정보 없음)'}
   "reasoning": "분석 근거 설명"
 }`;
 
-    const response = await client.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: process.env.OPENAI_MODEL_TEXT || 'gpt-4o-mini',
       messages: [
         {
