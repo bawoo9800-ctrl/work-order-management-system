@@ -722,23 +722,3 @@ export const processWorkOrderImage = asyncHandler(async (req, res) => {
     throw error;
   }
 });
-    fileSize: savedFile.size,
-    processingTime,
-    totalTime,
-  });
-
-  res.json({
-    success: true,
-    data: {
-      message: '이미지 처리가 완료되었습니다.',
-      workOrderId: id,
-      originalPath,
-      processedPath: savedFile.path,
-      processedFilename: savedFile.filename,
-      fileSize: savedFile.size,
-      processingTime,
-      totalTime,
-    },
-    error: null,
-  });
-});
