@@ -91,4 +91,10 @@ router.post('/:id/reclassify', workOrderController.reclassifyWorkOrder);
  */
 router.post('/:id/upload-edited-image', uploadSingle, handleMulterError, workOrderController.uploadEditedImage);
 
+/**
+ * POST /api/v1/work-orders/:id/add-image
+ * 작업지시서에 이미지 추가 (추가촬영)
+ */
+router.post('/:id/add-image', uploadSingle, handleMulterError, workOrderController.addImageToWorkOrder);
+
 export default router;

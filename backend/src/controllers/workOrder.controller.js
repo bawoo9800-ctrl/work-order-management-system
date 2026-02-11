@@ -516,6 +516,95 @@ export const uploadEditedImage = asyncHandler(async (req, res) => {
 });
 
 /**
+ * 작업지시서에 이미지 추가 (추가촬영)
+ * POST /api/v1/work-orders/:id/add-image
+ * 동일한 거래처의 작업지시서에 추가 이미지 업로드
+ */
+export const addImageToWorkOrder = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const startTime = Date.now();
+
+  // 파일 검증
+  if (!req.file) {
+    throw new AppError('이미지 파일이 필요합니다.', 400);
+  }
+
+  const { buffer, originalname, mimetype } = req.file;
+
+  logger.info('추가 이미지 업로드 시작', {
+    workOrderId: id,
+    originalFilename: originalname,
+    fileSize: buffer.length,
+    mimeType: mimetype,
+  });
+
+  // 작업지시서 조회
+  const workOrder = await WorkOrderModel.getWorkOrderById(parseInt(id));
+  if (!workOrder) {
+    throw new AppError('작업지시서를 찾을 수 없습니다.', 404);
+  }
+
+  // 이미지 저장
+  const imageResult = await imageProcessor.saveImage(buffer, originalname);
+
+  // 기존 images JSON 배열에 추가
+  let images = [];
+  try {
+    images = workOrder.images ? JSON.parse(workOrder.images) : [];
+  } catch (e) {
+    logger.error('images JSON 파싱 실패', { error: e.message });
+    images = [];
+  }
+
+  // 첫 번째 이미지가 없는 경우 (레거시 데이터)
+  if (images.length === 0 && workOrder.storage_path) {
+    images.push({
+      path: workOrder.storage_path,
+      filename: workOrder.original_filename,
+      order: 1,
+      uploaded_at: workOrder.created_at,
+    });
+  }
+
+  // 새 이미지 추가
+  const newImage = {
+    path: imageResult.path,
+    filename: originalname,
+    order: images.length + 1,
+    uploaded_at: new Date().toISOString(),
+  };
+  images.push(newImage);
+
+  // 데이터베이스 업데이트
+  await WorkOrderModel.updateWorkOrder(parseInt(id), {
+    images: JSON.stringify(images),
+    image_count: images.length,
+    updated_at: new Date(),
+  });
+
+  const processingTime = Date.now() - startTime;
+
+  logger.info('추가 이미지 업로드 완료', {
+    workOrderId: id,
+    totalImages: images.length,
+    newImagePath: imageResult.path,
+    processingTime,
+  });
+
+  res.json({
+    success: true,
+    data: {
+      message: `이미지가 추가되었습니다. (총 ${images.length}장)`,
+      workOrderId: id,
+      images: images,
+      imageCount: images.length,
+      processingTime,
+    },
+    error: null,
+  });
+});
+
+/**
  * 이미지 처리 (서버 측 고급 보정)
  * POST /api/v1/work-orders/:id/process-image
  * Body: {

@@ -146,6 +146,20 @@ export const workOrderAPI = {
     );
     return response.data;
   },
+
+  // 이미지 추가 (추가촬영)
+  addImage: async (id, formData) => {
+    const response = await apiClient.post(
+      `/api/v1/work-orders/${id}/add-image`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
+  },
 };
 
 /**

@@ -7,7 +7,7 @@
  * ========================================
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { workOrderAPI, clientAPI } from '../services/api';
 import ImageGalleryViewer from '../components/ImageGalleryViewer';
@@ -38,6 +38,10 @@ const HomePage = () => {
   const [filteredClientNames, setFilteredClientNames] = useState([]);
   
   const [imageCache, setImageCache] = useState(new Map());
+  
+  // 추가촬영용 ref
+  const fileInputRef = useRef(null);
+  const [uploadingId, setUploadingId] = useState(null);
   
   // 한국 시간대로 오늘 날짜
   const getKoreanDate = () => {
@@ -175,9 +179,29 @@ const HomePage = () => {
   
   // 이미지 클릭
   const handleImageClick = (order) => {
-    const imageUrl = getImageUrl(order);
-    setZoomedImage(imageUrl);
-    setZoomedOrder(order);
+    // images JSON 파싱
+    let images = [];
+    try {
+      images = order.images ? JSON.parse(order.images) : [];
+    } catch (e) {
+      console.error('images JSON 파싱 실패:', e);
+      images = [];
+    }
+    
+    // 이미지가 없으면 storage_path 사용 (레거시)
+    if (images.length === 0 && order.storage_path) {
+      images = [{
+        path: order.storage_path,
+        filename: order.original_filename,
+        order: 1,
+      }];
+    }
+    
+    // 이미지 URL 배열 생성
+    const imageUrls = images.map((img) => getImageUrl({...order, storage_path: img.path}));
+    
+    setZoomedImage(imageUrls[0]); // 첫 번째 이미지
+    setZoomedOrder({...order, imageUrls}); // 전체 이미지 URL 배열 추가
   };
   
   // 이미지 갤러리 닫기
@@ -227,9 +251,57 @@ const HomePage = () => {
       throw error;
     }
   };
+  
+  // 추가촬영 버튼 클릭
+  const handleAddImageClick = (workOrderId) => {
+    setUploadingId(workOrderId);
+    fileInputRef.current?.click();
+  };
+  
+  // 추가촬영 파일 선택
+  const handleAddImageFile = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !uploadingId) return;
+    
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      console.log(`📸 추가촬영 시작: 작업지시서 ${uploadingId}`);
+      
+      const response = await workOrderAPI.addImage(uploadingId, formData);
+      
+      if (response.success) {
+        console.log(`✅ 추가촬영 완료: ${response.data.imageCount}장`, response.data);
+        alert(`✅ 이미지가 추가되었습니다!\n총 ${response.data.imageCount}장`);
+        
+        // 목록 새로고침
+        await fetchWorkOrdersByDate(selectedDate);
+      }
+    } catch (error) {
+      console.error('❌ 추가촬영 실패:', error);
+      alert('❌ 이미지 추가에 실패했습니다.\n' + (error.response?.data?.error || error.message));
+    } finally {
+      setUploadingId(null);
+      // 파일 입력 초기화
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   return (
     <>
+      {/* 숨겨진 파일 입력 */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        style={{ display: 'none' }}
+        onChange={handleAddImageFile}
+      />
+      
       <div className="homepage-container">
         {/* 상단 헤더 + 검색 */}
         <div className="page-header">
@@ -375,6 +447,13 @@ const HomePage = () => {
                     />
                     <div className="click-hint">클릭하여 확대</div>
                     
+                    {/* 이미지 카운트 배지 */}
+                    {order.image_count && order.image_count > 1 && (
+                      <div className="image-count-badge">
+                        📷 {order.image_count}장
+                      </div>
+                    )}
+                    
                     {/* 거래처명 배지 */}
                     {order.client_name && (
                       <div className="client-badge">
@@ -404,16 +483,31 @@ const HomePage = () => {
                   
                   {/* 하단 메타 정보 */}
                   <div className="card-footer">
-                    <span className="footer-user">👤 {order.uploaded_by || '알 수 없음'}</span>
-                    <span className="footer-divider">•</span>
-                    <span className="footer-time">
-                      {new Date(order.created_at).toLocaleDateString('ko-KR', { 
-                        month: 'short', 
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </span>
+                    <div className="footer-info">
+                      <span className="footer-user">👤 {order.uploaded_by || '알 수 없음'}</span>
+                      <span className="footer-divider">•</span>
+                      <span className="footer-time">
+                        {new Date(order.created_at).toLocaleDateString('ko-KR', { 
+                          month: 'short', 
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    
+                    {/* 추가촬영 버튼 */}
+                    <button 
+                      className="btn-add-image"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddImageClick(order.id);
+                      }}
+                      disabled={uploadingId === order.id}
+                      title="이미지 추가"
+                    >
+                      {uploadingId === order.id ? '⏳ 업로드 중...' : '📸 추가촬영'}
+                    </button>
                   </div>
                 </div>
               ))
@@ -425,7 +519,7 @@ const HomePage = () => {
       {/* 이미지 갤러리 */}
       {zoomedImage && zoomedOrder && (
         <ImageGalleryViewer
-          images={[zoomedImage]}
+          images={zoomedOrder.imageUrls || [zoomedImage]}
           initialIndex={0}
           onClose={closeImageZoom}
           workOrder={zoomedOrder}
@@ -780,12 +874,18 @@ const HomePage = () => {
         
         .card-footer {
           display: flex;
+          justify-content: space-between;
           align-items: center;
           padding: 10px 16px;
           border-top: 1px solid #f0f0f0;
           background: #fafafa;
           font-size: 12px;
           color: #666;
+        }
+        
+        .footer-info {
+          display: flex;
+          align-items: center;
         }
         
         .footer-user {
@@ -799,6 +899,51 @@ const HomePage = () => {
         
         .footer-time {
           color: #999;
+        }
+        
+        /* 추가촬영 버튼 */
+        .btn-add-image {
+          padding: 6px 12px;
+          background: #4CAF50;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          font-size: 11px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          white-space: nowrap;
+        }
+        
+        .btn-add-image:hover:not(:disabled) {
+          background: #45a049;
+          transform: translateY(-1px);
+          box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+        }
+        
+        .btn-add-image:active:not(:disabled) {
+          transform: translateY(0);
+        }
+        
+        .btn-add-image:disabled {
+          background: #ccc;
+          cursor: not-allowed;
+          opacity: 0.7;
+        }
+        
+        /* 이미지 카운트 배지 */
+        .image-count-badge {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          background: rgba(255, 255, 255, 0.95);
+          color: #333;
+          padding: 4px 10px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 600;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+          z-index: 2;
         }
         
         .empty-state {
