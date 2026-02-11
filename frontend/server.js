@@ -36,7 +36,7 @@ app.use(express.static(join(__dirname, 'dist'), {
 }));
 
 // SPA 폴백: 정적 파일이 없으면 index.html 반환
-app.use((req, res) => {
+app.get('*', (req, res) => {
   res.sendFile(join(__dirname, 'dist', 'index.html'));
 });
 
