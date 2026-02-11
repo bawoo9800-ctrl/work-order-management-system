@@ -67,13 +67,13 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
     
     // images 필드: 여러 이미지 경로를 JSON 배열로 저장
     const imagesJson = JSON.stringify(imageResults.map(img => ({
+      path: img.storagePath, // 'path' 필드 사용 (프론트엔드 호환)
       uuid: img.uuid,
-      storage_path: img.storagePath,
-      original_filename: img.originalFilename,
+      filename: img.originalFilename,
       file_size: img.fileSize,
       mime_type: img.mimeType,
-      image_width: img.imageWidth,
-      image_height: img.imageHeight,
+      width: img.imageWidth,
+      height: img.imageHeight,
     })));
 
     const workOrderData = {
@@ -85,6 +85,7 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
       image_width: firstImage.imageWidth,
       image_height: firstImage.imageHeight,
       images: imagesJson, // 다중 이미지 정보
+      image_count: imageResults.length, // ✅ 이미지 개수 추가
       client_id: null,
       client_name: clientName?.trim() || null,
       site_name: siteName?.trim() || null,
@@ -781,13 +782,13 @@ export const addImagesToWorkOrder = asyncHandler(async (req, res) => {
   // 첫 번째 이미지가 없는 경우 (레거시 데이터)
   if (images.length === 0 && workOrder.storage_path) {
     images.push({
+      path: workOrder.storage_path, // 'path' 필드 사용
       uuid: workOrder.uuid,
-      storage_path: workOrder.storage_path,
-      original_filename: workOrder.original_filename,
+      filename: workOrder.original_filename,
       file_size: workOrder.file_size,
       mime_type: workOrder.mime_type,
-      image_width: workOrder.image_width,
-      image_height: workOrder.image_height,
+      width: workOrder.image_width,
+      height: workOrder.image_height,
     });
   }
 
@@ -797,13 +798,13 @@ export const addImagesToWorkOrder = asyncHandler(async (req, res) => {
     const imageResult = await imageProcessor.processAndSaveImage(file.buffer, file.originalname);
     
     const newImage = {
+      path: imageResult.storagePath, // 'path' 필드 사용
       uuid: imageResult.uuid,
-      storage_path: imageResult.storagePath,
-      original_filename: imageResult.originalFilename,
+      filename: imageResult.originalFilename,
       file_size: imageResult.fileSize,
       mime_type: imageResult.mimeType,
-      image_width: imageResult.imageWidth,
-      image_height: imageResult.imageHeight,
+      width: imageResult.imageWidth,
+      height: imageResult.imageHeight,
     };
     
     images.push(newImage);
@@ -813,6 +814,7 @@ export const addImagesToWorkOrder = asyncHandler(async (req, res) => {
   // 데이터베이스 업데이트
   await WorkOrderModel.updateWorkOrder(parseInt(id), {
     images: JSON.stringify(images),
+    image_count: images.length, // ✅ 이미지 개수 업데이트
     updated_at: new Date(),
   });
 
