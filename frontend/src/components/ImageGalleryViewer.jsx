@@ -34,6 +34,10 @@ function ImageGalleryViewer({
   const [showInfo, setShowInfo] = useState(true);
   const [showEditor, setShowEditor] = useState(false);
   
+  // 사진 추가 관련 상태
+  const [uploading, setUploading] = useState(false);
+  const addImageInputRef = useRef(null);
+  
   // 자동완성 상태
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [filteredClients, setFilteredClients] = useState([]);
@@ -347,6 +351,57 @@ function ImageGalleryViewer({
     setFilteredClients([]);
   };
   
+  // 🆕 사진 추가 버튼 클릭
+  const handleAddImageClick = () => {
+    addImageInputRef.current?.click();
+  };
+  
+  // 🆕 사진 추가 처리
+  const handleAddImage = async (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    if (selectedFiles.length === 0 || !workOrder) return;
+    
+    setUploading(true);
+    
+    try {
+      const formData = new FormData();
+      
+      // 여러 이미지 추가
+      selectedFiles.forEach((file) => {
+        formData.append('images', file);
+      });
+      
+      console.log('📸 사진 추가 시작:', workOrder.id, selectedFiles.length);
+      
+      // API 호출
+      const response = await fetch(`/api/v1/work-orders/${workOrder.id}/add-images`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert(`✅ ${selectedFiles.length}장의 사진이 추가되었습니다!`);
+        
+        // 갤러리 새로고침
+        if (onUpdateWorkOrder) {
+          window.location.reload();
+        }
+      } else {
+        throw new Error(result.message || '사진 추가 실패');
+      }
+    } catch (error) {
+      console.error('❌ 사진 추가 실패:', error);
+      alert('사진 추가에 실패했습니다.\n' + error.message);
+    } finally {
+      setUploading(false);
+      if (addImageInputRef.current) {
+        addImageInputRef.current.value = '';
+      }
+    }
+  };
+  
   return (
     <div className="image-gallery-viewer">
       {/* 배경 오버레이 */}
@@ -548,6 +603,17 @@ function ImageGalleryViewer({
                   placeholder="메모를 입력하세요"
                   rows={4}
                 />
+              </div>
+              
+              {/* 사진 추가 버튼 */}
+              <div className="button-group" style={{ marginBottom: '10px' }}>
+                <button 
+                  className="btn-add-image-gallery" 
+                  onClick={handleAddImageClick}
+                  disabled={uploading}
+                >
+                  {uploading ? '⏳ 업로드 중...' : '📸 사진 추가'}
+                </button>
               </div>
               
               {/* 저장/삭제 버튼 */}
@@ -922,6 +988,31 @@ function ImageGalleryViewer({
           box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
         }
         
+        .btn-add-image-gallery {
+          width: 100%;
+          padding: 12px;
+          background: #2196F3;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        
+        .btn-add-image-gallery:hover:not(:disabled) {
+          background: #1976D2;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+        }
+        
+        .btn-add-image-gallery:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          transform: none;
+        }
+        
         .work-order-meta {
           margin-top: 20px;
           padding-top: 20px;
@@ -989,6 +1080,16 @@ function ImageGalleryViewer({
           onCancel={() => setShowEditor(false)}
         />
       )}
+      
+      {/* 사진 추가 파일 입력 */}
+      <input
+        ref={addImageInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleAddImage}
+        style={{ display: 'none' }}
+      />
     </div>
   );
 }

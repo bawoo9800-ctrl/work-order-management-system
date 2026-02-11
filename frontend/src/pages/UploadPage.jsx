@@ -542,6 +542,7 @@ function UploadPage() {
           50% { opacity: 0.5; }
         }
 
+        /* 다중 이미지 미리보기 */
         .preview-section {
           background: white;
           border-radius: 16px;
