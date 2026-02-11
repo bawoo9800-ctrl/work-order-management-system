@@ -8,6 +8,7 @@ import UploadPage from './pages/UploadPage';
 import StatsPage from './pages/StatsPage';
 import ClientsPage from './pages/ClientsPage';
 import AdminPage from './pages/AdminPage';
+import TrashPage from './pages/TrashPage';
 
 // Components
 import NotificationHandler from './components/NotificationHandler';
@@ -68,6 +69,7 @@ function AppContent() {
               <Link to="/upload" className="nav-link">업로드</Link>
               <Link to="/clients" className="nav-link">거래처</Link>
               <Link to="/stats" className="nav-link">통계</Link>
+              <Link to="/trash" className="nav-link">휴지통</Link>
               <Link to="/admin" className="nav-link">관리</Link>
             </nav>
             <div className="health-status">
@@ -94,6 +96,7 @@ function AppContent() {
               <Route path="/upload" element={<UploadPage />} />
               <Route path="/clients" element={<ClientsPage />} />
               <Route path="/stats" element={<StatsPage />} />
+              <Route path="/trash" element={<TrashPage />} />
               <Route path="/admin" element={<AdminPage />} />
             </Routes>
           </div>

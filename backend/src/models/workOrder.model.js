@@ -386,3 +386,81 @@ export const getRecentWorkOrders = async (limit = 10) => {
 
   return await query(sql, [limit]);
 };
+
+/**
+ * 휴지통 작업지시서 조회 (삭제된 항목만)
+ * @param {object} options - 조회 옵션
+ * @param {number} options.page - 페이지 번호 (기본: 1)
+ * @param {number} options.limit - 페이지당 개수 (기본: 20)
+ * @returns {Promise<object>} 휴지통 작업지시서 목록 및 페이징 정보
+ */
+export const getDeletedWorkOrders = async (options = {}) => {
+  const { page = 1, limit = 20 } = options;
+  const offset = (page - 1) * limit;
+
+  // 총 개수 조회
+  const countSql = `
+    SELECT COUNT(*) as total
+    FROM work_orders
+    WHERE status = 'deleted'
+  `;
+  const { total } = await queryOne(countSql);
+
+  // 데이터 조회
+  const dataSql = `
+    SELECT 
+      wo.*,
+      c.code as client_code,
+      COALESCE(wo.client_name, c.name) as client_name
+    FROM work_orders wo
+    LEFT JOIN clients c ON wo.client_id = c.id
+    WHERE wo.status = 'deleted'
+    ORDER BY wo.updated_at DESC
+    LIMIT ? OFFSET ?
+  `;
+  const workOrders = await query(dataSql, [limit, offset]);
+
+  return {
+    data: workOrders,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
+/**
+ * 작업지시서 복구 (휴지통에서 복구)
+ * @param {number} id - 작업지시서 ID
+ * @returns {Promise<number>} 영향받은 행 수
+ */
+export const restoreWorkOrder = async (id) => {
+  const sql = 'UPDATE work_orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = ?';
+  const affectedRows = await execute(sql, ['classified', id, 'deleted']);
+
+  logger.info('작업지시서 복구 완료', {
+    id,
+    affectedRows,
+  });
+
+  return affectedRows;
+};
+
+/**
+ * 작업지시서 영구 삭제 (물리적 삭제)
+ * @param {number} id - 작업지시서 ID
+ * @returns {Promise<number>} 영향받은 행 수
+ */
+export const permanentlyDeleteWorkOrder = async (id) => {
+  const sql = 'DELETE FROM work_orders WHERE id = ? AND status = ?';
+  const affectedRows = await execute(sql, [id, 'deleted']);
+
+  logger.info('작업지시서 영구 삭제 완료', {
+    id,
+    affectedRows,
+  });
+
+  return affectedRows;
+};

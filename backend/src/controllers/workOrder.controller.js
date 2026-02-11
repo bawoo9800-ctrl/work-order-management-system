@@ -403,3 +403,74 @@ export const reclassifyWorkOrder = asyncHandler(async (req, res) => {
     error: null,
   });
 });
+
+/**
+ * 휴지통 작업지시서 조회
+ * GET /api/v1/work-orders/trash
+ */
+export const getTrashWorkOrders = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 20 } = req.query;
+
+  const result = await WorkOrderModel.getDeletedWorkOrders({
+    page: parseInt(page),
+    limit: parseInt(limit),
+  });
+
+  res.json({
+    success: true,
+    data: result,
+    error: null,
+  });
+});
+
+/**
+ * 작업지시서 복구
+ * POST /api/v1/work-orders/:id/restore
+ */
+export const restoreWorkOrder = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  logger.info('작업지시서 복구 요청', { id });
+
+  const affectedRows = await WorkOrderModel.restoreWorkOrder(parseInt(id));
+
+  if (affectedRows === 0) {
+    throw new AppError('복구할 작업지시서를 찾을 수 없습니다.', 404);
+  }
+
+  logger.info('작업지시서 복구 완료', { id, affectedRows });
+
+  res.json({
+    success: true,
+    data: {
+      message: '작업지시서가 복구되었습니다.',
+    },
+    error: null,
+  });
+});
+
+/**
+ * 작업지시서 영구 삭제
+ * DELETE /api/v1/work-orders/:id/permanent
+ */
+export const permanentlyDeleteWorkOrder = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  logger.info('작업지시서 영구 삭제 요청', { id });
+
+  const affectedRows = await WorkOrderModel.permanentlyDeleteWorkOrder(parseInt(id));
+
+  if (affectedRows === 0) {
+    throw new AppError('삭제할 작업지시서를 찾을 수 없습니다.', 404);
+  }
+
+  logger.info('작업지시서 영구 삭제 완료', { id, affectedRows });
+
+  res.json({
+    success: true,
+    data: {
+      message: '작업지시서가 영구적으로 삭제되었습니다.',
+    },
+    error: null,
+  });
+});

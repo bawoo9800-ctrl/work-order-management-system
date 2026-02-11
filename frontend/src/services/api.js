@@ -94,9 +94,27 @@ export const workOrderAPI = {
     return response.data;
   },
 
-  // 삭제
+  // 삭제 (휴지통으로 이동)
   delete: async (id) => {
     const response = await apiClient.delete(`/api/v1/work-orders/${id}`);
+    return response.data;
+  },
+
+  // 휴지통 조회
+  trash: async (params = {}) => {
+    const response = await apiClient.get('/api/v1/work-orders/trash', { params });
+    return response.data;
+  },
+
+  // 복구
+  restore: async (id) => {
+    const response = await apiClient.post(`/api/v1/work-orders/${id}/restore`);
+    return response.data;
+  },
+
+  // 영구 삭제
+  permanentDelete: async (id) => {
+    const response = await apiClient.delete(`/api/v1/work-orders/${id}/permanent`);
     return response.data;
   },
 

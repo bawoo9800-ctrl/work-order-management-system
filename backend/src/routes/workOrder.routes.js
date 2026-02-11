@@ -32,6 +32,12 @@ router.get('/', workOrderController.getWorkOrders);
 router.get('/recent', workOrderController.getRecentWorkOrders);
 
 /**
+ * GET /api/v1/work-orders/trash
+ * 휴지통 작업지시서 조회
+ */
+router.get('/trash', workOrderController.getTrashWorkOrders);
+
+/**
  * GET /api/v1/work-orders/stats/summary
  * 작업지시서 통계
  */
@@ -57,9 +63,21 @@ router.put('/:id', workOrderController.updateWorkOrder);
 
 /**
  * DELETE /api/v1/work-orders/:id
- * 작업지시서 삭제
+ * 작업지시서 삭제 (휴지통으로 이동)
  */
 router.delete('/:id', workOrderController.deleteWorkOrder);
+
+/**
+ * POST /api/v1/work-orders/:id/restore
+ * 작업지시서 복구
+ */
+router.post('/:id/restore', workOrderController.restoreWorkOrder);
+
+/**
+ * DELETE /api/v1/work-orders/:id/permanent
+ * 작업지시서 영구 삭제
+ */
+router.delete('/:id/permanent', workOrderController.permanentlyDeleteWorkOrder);
 
 /**
  * POST /api/v1/work-orders/:id/reclassify
