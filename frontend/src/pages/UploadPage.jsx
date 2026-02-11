@@ -816,7 +816,7 @@ function UploadPage() {
             padding: 40px 20px;
           }
         }
-      \`}</style>
+      `}</style>
     </div>
   );
 }
