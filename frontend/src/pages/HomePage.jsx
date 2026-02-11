@@ -89,14 +89,24 @@ const HomePage = () => {
   const handleSearchChange = (value) => {
     setSearchQuery(value);
     
-    // 검색어가 있으면 전체 내역 조회, 없으면 당일 날짜로 복귀
+    // 검색어가 있으면 전체 내역 조회, 없으면 필터 상태 확인
     if (value.trim()) {
-      // 전체 내역 조회 (날짜 필터 없음)
       fetchWorkOrdersByDate(null);
     } else {
-      // 검색어 없으면 당일로 복귀
-      fetchWorkOrdersByDate(selectedDate);
+      // 다른 필터가 있으면 전체, 없으면 당일
+      const hasOtherFilters = filters.workType || filters.siteName || filters.memo;
+      fetchWorkOrdersByDate(hasOtherFilters ? null : selectedDate);
     }
+  };
+  
+  // 필터 변경 핸들러
+  const handleFilterChange = (key, value) => {
+    const newFilters = { ...filters, [key]: value };
+    setFilters(newFilters);
+    
+    // 필터가 하나라도 있으면 전체 내역 조회
+    const hasFilters = newFilters.workType || newFilters.siteName || newFilters.memo || searchQuery;
+    fetchWorkOrdersByDate(hasFilters ? null : selectedDate);
   };
   
   // 거래처 목록 조회
@@ -148,7 +158,7 @@ const HomePage = () => {
       endDate: '',
     });
     setSearchQuery('');
-    // 당일로 복귀
+    // 모든 필터 초기화 → 당일로 복귀
     fetchWorkOrdersByDate(selectedDate);
   };
   
@@ -301,7 +311,7 @@ const HomePage = () => {
                   <label>🔧 작업 유형</label>
                   <select
                     value={filters.workType}
-                    onChange={(e) => setFilters({ ...filters, workType: e.target.value })}
+                    onChange={(e) => handleFilterChange('workType', e.target.value)}
                   >
                     <option value="">전체</option>
                     {workTypes.map((type) => (
@@ -315,9 +325,9 @@ const HomePage = () => {
                   <label>🏗️ 현장명</label>
                   <input
                     type="text"
-                    placeholder="현장명 검색..."
+                    placeholder="현장명 검색... (전체 내역)"
                     value={filters.siteName}
-                    onChange={(e) => setFilters({ ...filters, siteName: e.target.value })}
+                    onChange={(e) => handleFilterChange('siteName', e.target.value)}
                   />
                 </div>
                 
@@ -326,9 +336,9 @@ const HomePage = () => {
                   <label>📝 메모</label>
                   <input
                     type="text"
-                    placeholder="메모 검색..."
+                    placeholder="메모 검색... (전체 내역)"
                     value={filters.memo}
-                    onChange={(e) => setFilters({ ...filters, memo: e.target.value })}
+                    onChange={(e) => handleFilterChange('memo', e.target.value)}
                   />
                 </div>
               </div>
