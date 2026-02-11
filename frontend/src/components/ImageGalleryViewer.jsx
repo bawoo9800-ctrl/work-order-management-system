@@ -256,29 +256,31 @@ function ImageGalleryViewer({
       // FormData 생성
       const formData = new FormData();
       formData.append('image', blob, 'edited_image.jpg');
-      formData.append('workOrderId', workOrder.id);
       
-      // 서버에 업로드 (TODO: API 엔드포인트 추가 필요)
-      // const response = await fetch('/api/v1/work-orders/upload-edited-image', {
-      //   method: 'POST',
-      //   body: formData,
-      // });
+      // 서버에 업로드
+      const response = await fetch(`/api/v1/work-orders/${workOrder.id}/upload-edited-image`, {
+        method: 'POST',
+        body: formData,
+      });
       
-      // 임시: 로컬에서 다운로드
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `보정된_작업지시서_${workOrder.client_name || 'unknown'}.jpg`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      const result = await response.json();
       
-      setShowEditor(false);
-      alert('이미지가 보정되어 다운로드되었습니다!');
+      if (result.success) {
+        // 성공: 에디터 닫기 및 이미지 새로고침
+        setShowEditor(false);
+        alert('✅ 이미지가 보정되어 저장되었습니다!');
+        
+        // 작업지시서 새로고침 (부모 컴포넌트에서 처리)
+        if (onUpdateWorkOrder) {
+          // 페이지 새로고침으로 최신 이미지 반영
+          window.location.reload();
+        }
+      } else {
+        throw new Error(result.message || '이미지 저장 실패');
+      }
     } catch (error) {
       console.error('❌ 이미지 저장 실패:', error);
-      alert('이미지 저장에 실패했습니다.');
+      alert('이미지 저장에 실패했습니다.\n' + error.message);
     }
   };
   

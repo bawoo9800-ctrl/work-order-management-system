@@ -456,6 +456,66 @@ export const permanentlyDeleteWorkOrder = asyncHandler(async (req, res) => {
 });
 
 /**
+ * 편집된 이미지 업로드
+ * POST /api/v1/work-orders/:id/upload-edited-image
+ */
+export const uploadEditedImage = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const startTime = Date.now();
+
+  // 파일 검증
+  if (!req.file) {
+    throw new AppError('이미지 파일이 필요합니다.', 400);
+  }
+
+  const { buffer, originalname, mimetype } = req.file;
+
+  logger.info('편집된 이미지 업로드 시작', {
+    workOrderId: id,
+    originalFilename: originalname,
+    fileSize: buffer.length,
+    mimeType: mimetype,
+  });
+
+  // 작업지시서 조회
+  const workOrder = await WorkOrderModel.getWorkOrderById(parseInt(id));
+  if (!workOrder) {
+    throw new AppError('작업지시서를 찾을 수 없습니다.', 404);
+  }
+
+  // 이미지 처리 및 저장
+  const imageResult = await imageProcessor.saveImage(buffer, originalname);
+
+  // 데이터베이스 업데이트 (storage_path를 새 이미지로 변경)
+  await WorkOrderModel.updateWorkOrder(parseInt(id), {
+    storage_path: imageResult.path,
+    file_size_bytes: imageResult.size,
+    updated_at: new Date(),
+  });
+
+  const processingTime = Date.now() - startTime;
+
+  logger.info('편집된 이미지 업로드 완료', {
+    workOrderId: id,
+    newPath: imageResult.path,
+    fileSize: imageResult.size,
+    processingTime,
+  });
+
+  res.json({
+    success: true,
+    data: {
+      message: '이미지가 성공적으로 업로드되었습니다.',
+      workOrderId: id,
+      path: imageResult.path,
+      fileSize: imageResult.size,
+      processingTime,
+    },
+    error: null,
+  });
+});
+
+/**
  * 이미지 처리 (서버 측 고급 보정)
  * POST /api/v1/work-orders/:id/process-image
  * Body: {

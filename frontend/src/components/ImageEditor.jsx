@@ -103,47 +103,6 @@ export default function ImageEditor({ imageUrl, onSave, onCancel, workOrderId })
     }, 100);
   };
 
-  // 서버 측 고급 보정
-  const handleServerProcessing = async () => {
-    if (!workOrderId) {
-      alert('작업지시서 ID가 없습니다.');
-      return;
-    }
-
-    if (!confirm('서버에서 고급 이미지 보정을 수행하시겠습니까?\n\n✅ 원근 보정\n✅ 자동 자르기\n✅ 문서 스캔 효과\n\n처리 시간: 약 5-10초')) {
-      return;
-    }
-
-    setProcessing(true);
-
-    try {
-      const response = await workOrderAPI.processImage(workOrderId, {
-        enablePerspective: true,
-        enableAutoCrop: true,
-        enableScan: true,
-        enableThreshold: false,
-        enableBackgroundRemoval: false,
-        brightness: 1.1,
-        contrast: 1.3,
-        threshold: 128,
-      });
-
-      console.log('✅ 서버 보정 완료:', response);
-
-      alert(`✅ 이미지 보정이 완료되었습니다!\n\n처리 시간: ${response.data.processingTime}ms\n파일 크기: ${(response.data.fileSize / 1024).toFixed(2)} KB`);
-
-      // 보정된 이미지로 새로고침
-      if (onSave) {
-        onSave();
-      }
-    } catch (error) {
-      console.error('❌ 서버 보정 실패:', error);
-      alert('이미지 보정에 실패했습니다.\n' + (error.response?.data?.message || error.message));
-    } finally {
-      setProcessing(false);
-    }
-  };
-  
   // 흑백 변환
   const handleGrayscale = () => {
     const canvas = canvasRef.current;
@@ -183,6 +142,65 @@ export default function ImageEditor({ imageUrl, onSave, onCancel, workOrderId })
     }
     
     ctx.putImageData(imageData, 0, 0);
+  };
+
+  // 자동 크롭 (배경 제거)
+  const handleAutoCrop = () => {
+    const canvas = canvasRef.current;
+    if (!canvas || !originalImage) return;
+
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+
+    // 경계 찾기 (비어있지 않은 영역)
+    let minX = canvas.width;
+    let minY = canvas.height;
+    let maxX = 0;
+    let maxY = 0;
+
+    const threshold = 240; // 배경으로 간주할 밝기 임계값
+
+    for (let y = 0; y < canvas.height; y++) {
+      for (let x = 0; x < canvas.width; x++) {
+        const i = (y * canvas.width + x) * 4;
+        const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        
+        // 배경이 아닌 픽셀 찾기
+        if (brightness < threshold) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+
+    // 여백 추가 (10px)
+    const padding = 10;
+    minX = Math.max(0, minX - padding);
+    minY = Math.max(0, minY - padding);
+    maxX = Math.min(canvas.width, maxX + padding);
+    maxY = Math.min(canvas.height, maxY + padding);
+
+    const cropWidth = maxX - minX;
+    const cropHeight = maxY - minY;
+
+    if (cropWidth > 0 && cropHeight > 0) {
+      // 크롭된 영역 추출
+      const croppedImageData = ctx.getImageData(minX, minY, cropWidth, cropHeight);
+      
+      // 캔버스 크기 조정
+      canvas.width = cropWidth;
+      canvas.height = cropHeight;
+      
+      // 크롭된 이미지 그리기
+      ctx.putImageData(croppedImageData, 0, 0);
+      
+      alert(`✂️ 자동 크롭 완료!\n크기: ${cropWidth}x${cropHeight}px`);
+    } else {
+      alert('크롭할 영역을 찾을 수 없습니다.');
+    }
   };
   
   // 초기화
@@ -362,6 +380,16 @@ export default function ImageEditor({ imageUrl, onSave, onCancel, workOrderId })
           background: #c82333;
         }
         
+        .btn-warning {
+          background: #ffc107;
+          color: #000;
+          font-weight: 600;
+        }
+        
+        .btn-warning:hover {
+          background: #e0a800;
+        }
+        
         .btn-small {
           padding: 8px 16px;
           font-size: 14px;
@@ -408,14 +436,6 @@ export default function ImageEditor({ imageUrl, onSave, onCancel, workOrderId })
               ✨ 자동 보정 (권장)
             </button>
             <button 
-              className="btn btn-success"
-              onClick={handleServerProcessing}
-              disabled={processing}
-              style={{ marginLeft: '10px' }}
-            >
-              🚀 서버 고급 보정 (AI)
-            </button>
-            <button 
               className="btn btn-secondary btn-small"
               onClick={handleGrayscale}
             >
@@ -426,6 +446,12 @@ export default function ImageEditor({ imageUrl, onSave, onCancel, workOrderId })
               onClick={handleThreshold}
             >
               📄 텍스트 선명 (임계값)
+            </button>
+            <button 
+              className="btn btn-warning btn-small"
+              onClick={handleAutoCrop}
+            >
+              ✂️ 자동 크롭 (배경 제거)
             </button>
             <button 
               className="btn btn-secondary btn-small"
