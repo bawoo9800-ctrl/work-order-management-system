@@ -430,8 +430,8 @@ const styles = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-    gap: '24px',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+    gap: '20px',
     paddingBottom: '40px',
     maxWidth: '1920px',
     margin: '0 auto',
@@ -511,48 +511,57 @@ const styles = {
   },
 };
 
-// 미디어 쿼리를 위한 CSS 추가 (작업지시서와 동일)
+// 미디어 쿼리를 위한 CSS 추가 (더 많은 열 표시)
 const responsiveStyles = `
-  /* 대형 데스크톱 (1920px+) */
-  @media (min-width: 1920px) {
+  /* 초대형 데스크톱 (2560px+) - 8열 */
+  @media (min-width: 2560px) {
     .purchase-order-grid {
-      grid-template-columns: repeat(5, 1fr) !important;
+      grid-template-columns: repeat(8, 1fr) !important;
+      max-width: 2560px;
+    }
+  }
+  
+  /* 대형 데스크톱 (1920-2559px) - 6열 */
+  @media (min-width: 1920px) and (max-width: 2559px) {
+    .purchase-order-grid {
+      grid-template-columns: repeat(6, 1fr) !important;
       max-width: 1920px;
     }
   }
   
-  /* 일반 데스크톱 (1440-1919px) */
+  /* 일반 데스크톱 (1440-1919px) - 5열 */
   @media (min-width: 1440px) and (max-width: 1919px) {
+    .purchase-order-grid {
+      grid-template-columns: repeat(5, 1fr) !important;
+    }
+  }
+  
+  /* 소형 데스크톱 (1200-1439px) - 4열 */
+  @media (min-width: 1200px) and (max-width: 1439px) {
     .purchase-order-grid {
       grid-template-columns: repeat(4, 1fr) !important;
     }
   }
   
-  /* 소형 데스크톱/태블릿 (1024-1439px) */
-  @media (min-width: 1024px) and (max-width: 1439px) {
+  /* 태블릿 (900-1199px) - 3열 */
+  @media (min-width: 900px) and (max-width: 1199px) {
     .purchase-order-grid {
       grid-template-columns: repeat(3, 1fr) !important;
     }
   }
   
-  /* 태블릿 (768-1023px) */
-  @media (min-width: 768px) and (max-width: 1023px) {
+  /* 작은 태블릿 (600-899px) - 2열 */
+  @media (min-width: 600px) and (max-width: 899px) {
     .purchase-order-grid {
       grid-template-columns: repeat(2, 1fr) !important;
     }
   }
   
-  /* 모바일 (600-767px) */
-  @media (min-width: 600px) and (max-width: 767px) {
-    .purchase-order-grid {
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
-    }
-  }
-  
-  /* 작은 모바일 (599px 이하) */
+  /* 모바일 (599px 이하) - 1열 */
   @media (max-width: 599px) {
     .purchase-order-grid {
       grid-template-columns: 1fr !important;
+      gap: 16px !important;
     }
   }
   
