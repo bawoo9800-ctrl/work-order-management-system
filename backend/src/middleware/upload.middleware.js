@@ -29,7 +29,7 @@ const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE_MB || '10') * 1024 * 10
 /**
  * 한 번에 업로드 가능한 최대 파일 수
  */
-const MAX_FILES = parseInt(process.env.MAX_FILES_PER_REQUEST || '5');
+const MAX_FILES = parseInt(process.env.MAX_FILES_PER_REQUEST || '50');
 
 /**
  * 파일 필터 함수
