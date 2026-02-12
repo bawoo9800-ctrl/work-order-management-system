@@ -430,8 +430,8 @@ const styles = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-    gap: '20px',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(520px, 1fr))',
+    gap: '24px',
     paddingBottom: '40px',
     maxWidth: '1920px',
     margin: '0 auto',
