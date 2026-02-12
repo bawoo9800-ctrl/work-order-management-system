@@ -213,7 +213,7 @@ const PurchaseOrderListPage = () => {
               <div style={styles.imageContainer}>
                 <img 
                   src={`${API_BASE_URL}/uploads/${order.storage_path}`}
-                  alt={order.vendor_name || '발주서'}
+                  alt={order.supplier_name || '발주서'}
                   style={styles.image}
                   onError={(e) => {
                     e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23ddd" width="200" height="200"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="16" fill="%23999"%3E이미지 없음%3C/text%3E%3C/svg%3E';
@@ -232,7 +232,7 @@ const PurchaseOrderListPage = () => {
               <div style={styles.cardBody}>
                 <div style={styles.cardHeader}>
                   <h3 style={styles.vendorName}>
-                    {order.vendor_name || '발주처 미지정'}
+                    {order.supplier_name || '발주처 미지정'}
                   </h3>
                   <span 
                     style={{
@@ -245,9 +245,12 @@ const PurchaseOrderListPage = () => {
                 </div>
                 
                 <div style={styles.info}>
-                  <div>📅 발주일: {order.order_date || '-'}</div>
+                  {order.site_name && (
+                    <div>🏗️ 현장: {order.site_name}</div>
+                  )}
+                  <div>📅 발주일: {order.order_date ? new Date(order.order_date).toLocaleDateString('ko-KR') : '-'}</div>
                   {order.delivery_date && (
-                    <div>🚚 납품일: {order.delivery_date}</div>
+                    <div>🚚 납품일: {new Date(order.delivery_date).toLocaleDateString('ko-KR')}</div>
                   )}
                   {order.order_amount && (
                     <div>💰 {order.order_amount.toLocaleString()}원</div>
@@ -258,7 +261,13 @@ const PurchaseOrderListPage = () => {
                 </div>
                 
                 <div style={styles.meta}>
-                  {order.uploaded_by || '알 수 없음'} • {new Date(order.created_at).toLocaleString('ko-KR')}
+                  {order.uploaded_by || '알 수 없음'} • {new Date(order.created_at).toLocaleString('ko-KR', { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit', 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  })}
                 </div>
               </div>
             </div>
