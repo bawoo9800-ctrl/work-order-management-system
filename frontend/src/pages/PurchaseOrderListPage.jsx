@@ -430,7 +430,7 @@ const styles = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
     gap: '20px',
     paddingBottom: '40px',
     maxWidth: '1920px',
@@ -511,35 +511,35 @@ const styles = {
   },
 };
 
-// 미디어 쿼리를 위한 CSS 추가 (더 많은 열 표시)
+// 미디어 쿼리를 위한 CSS 추가 (가독성 최적화)
 const responsiveStyles = `
-  /* 초대형 데스크톱 (2560px+) - 8열 */
+  /* 초대형 데스크톱 (2560px+) - 7열 */
   @media (min-width: 2560px) {
     .purchase-order-grid {
-      grid-template-columns: repeat(8, 1fr) !important;
+      grid-template-columns: repeat(7, 1fr) !important;
       max-width: 2560px;
     }
   }
   
-  /* 대형 데스크톱 (1920-2559px) - 6열 */
+  /* 대형 데스크톱 (1920-2559px) - 5열 */
   @media (min-width: 1920px) and (max-width: 2559px) {
     .purchase-order-grid {
-      grid-template-columns: repeat(6, 1fr) !important;
+      grid-template-columns: repeat(5, 1fr) !important;
       max-width: 1920px;
     }
   }
   
-  /* 일반 데스크톱 (1440-1919px) - 5열 */
+  /* 일반 데스크톱 (1440-1919px) - 4열 */
   @media (min-width: 1440px) and (max-width: 1919px) {
     .purchase-order-grid {
-      grid-template-columns: repeat(5, 1fr) !important;
+      grid-template-columns: repeat(4, 1fr) !important;
     }
   }
   
-  /* 소형 데스크톱 (1200-1439px) - 4열 */
+  /* 소형 데스크톱 (1200-1439px) - 3열 */
   @media (min-width: 1200px) and (max-width: 1439px) {
     .purchase-order-grid {
-      grid-template-columns: repeat(4, 1fr) !important;
+      grid-template-columns: repeat(3, 1fr) !important;
     }
   }
   
