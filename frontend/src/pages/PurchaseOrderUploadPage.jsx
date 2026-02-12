@@ -29,12 +29,11 @@ function PurchaseOrderUploadPage() {
   const [uploadedBy, setUploadedBy] = useState('');
   
   // 발주처 자동완성
-  const [suppliers, setSuppliers] = useState([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [filteredSuppliers, setFilteredSuppliers] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   
   useEffect(() => {
-    fetchSuppliers();
     // 로컬스토리지에서 업로더 이름 불러오기
     const savedUploader = localStorage.getItem('lastUploadedBy');
     if (savedUploader) {
@@ -42,26 +41,31 @@ function PurchaseOrderUploadPage() {
     }
   }, []);
   
-  const fetchSuppliers = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/api/v1/suppliers`);
-      setSuppliers(response.data?.data || []);
-    } catch (error) {
-      console.error('발주처 조회 실패:', error);
-    }
-  };
-  
-  // 발주처 검색
-  const handleVendorSearch = (value) => {
+  // 발주처 검색 (API 직접 호출)
+  const handleVendorSearch = async (value) => {
     setVendorName(value);
     
-    if (value.trim()) {
-      const filtered = suppliers.filter(s => 
-        s.name.toLowerCase().includes(value.toLowerCase())
-      );
-      setFilteredSuppliers(filtered);
-      setShowAutocomplete(true);
+    if (value.trim().length > 0) {
+      try {
+        setIsSearching(true);
+        const response = await axios.get(
+          `${API_BASE_URL}/api/v1/suppliers/search?q=${encodeURIComponent(value)}&limit=10`
+        );
+        
+        console.log('🔍 발주처 검색 결과:', response.data);
+        
+        const results = response.data?.data || [];
+        setFilteredSuppliers(results);
+        setShowAutocomplete(results.length > 0);
+      } catch (error) {
+        console.error('❌ 발주처 검색 실패:', error);
+        setFilteredSuppliers([]);
+        setShowAutocomplete(false);
+      } finally {
+        setIsSearching(false);
+      }
     } else {
+      setFilteredSuppliers([]);
       setShowAutocomplete(false);
     }
   };
@@ -224,15 +228,21 @@ function PurchaseOrderUploadPage() {
         <h2 style={styles.sectionTitle}>📋 발주 정보</h2>
         
         <div style={styles.formGroup}>
-          <label style={styles.label}>발주처 (선택)</label>
+          <label style={styles.label}>
+            발주처 (선택) {isSearching && <span style={{ color: '#2196F3', fontSize: '12px' }}>검색 중...</span>}
+          </label>
           <div style={{ position: 'relative' }}>
             <input
               type="text"
               value={vendorName}
               onChange={(e) => handleVendorSearch(e.target.value)}
-              onFocus={() => vendorName && setShowAutocomplete(true)}
-              onBlur={() => setTimeout(() => setShowAutocomplete(false), 200)}
-              placeholder="발주처명 입력"
+              onFocus={() => {
+                if (vendorName.trim()) {
+                  handleVendorSearch(vendorName);
+                }
+              }}
+              onBlur={() => setTimeout(() => setShowAutocomplete(false), 300)}
+              placeholder="발주처명 입력 (예: ABC, 한국)"
               style={styles.input}
             />
             
