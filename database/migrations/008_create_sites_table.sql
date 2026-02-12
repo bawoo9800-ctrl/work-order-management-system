@@ -10,8 +10,8 @@ USE work_order_management;
 -- 1. sites 테이블 생성
 -- =====================================================
 CREATE TABLE IF NOT EXISTS `sites` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `client_id` int(11) NOT NULL COMMENT '거래처 ID',
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `client_id` int(10) unsigned NOT NULL COMMENT '거래처 ID',
   `name` varchar(200) NOT NULL COMMENT '현장명',
   `address` text DEFAULT NULL COMMENT '현장 주소',
   `manager` varchar(100) DEFAULT NULL COMMENT '현장 담당자',
@@ -23,14 +23,15 @@ CREATE TABLE IF NOT EXISTS `sites` (
   PRIMARY KEY (`id`),
   KEY `idx_client_id` (`client_id`),
   KEY `idx_name` (`name`),
-  KEY `idx_is_active` (`is_active`)
+  KEY `idx_is_active` (`is_active`),
+  CONSTRAINT `fk_sites_client` FOREIGN KEY (`client_id`) REFERENCES `clients` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='현장 마스터';
 
 -- =====================================================
 -- 2. purchase_orders 테이블에 site_id 컬럼 추가
 -- =====================================================
 ALTER TABLE `purchase_orders` 
-ADD COLUMN `site_id` int(11) DEFAULT NULL COMMENT '현장 ID' AFTER `supplier_contact`,
+ADD COLUMN `site_id` int(10) unsigned DEFAULT NULL COMMENT '현장 ID' AFTER `supplier_contact`,
 ADD KEY `idx_site_id` (`site_id`);
 
 -- =====================================================
@@ -61,7 +62,7 @@ WHERE po.site_name IS NOT NULL AND po.site_name != '';
 -- 4. work_orders 테이블에도 site_id 추가 (선택사항)
 -- =====================================================
 ALTER TABLE `work_orders` 
-ADD COLUMN `site_id` int(11) DEFAULT NULL COMMENT '현장 ID' AFTER `site_name`,
+ADD COLUMN `site_id` int(10) unsigned DEFAULT NULL COMMENT '현장 ID' AFTER `site_name`,
 ADD KEY `idx_site_id` (`site_id`);
 
 -- =====================================================
