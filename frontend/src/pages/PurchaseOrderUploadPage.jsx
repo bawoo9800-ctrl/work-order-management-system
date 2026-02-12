@@ -54,7 +54,7 @@ function PurchaseOrderUploadPage() {
         
         console.log('🔍 거래처 검색 결과:', response.data);
         
-        const results = response.data?.data || [];
+        const results = response.data?.data?.clients || [];
         setFilteredClients(results);
         setShowAutocomplete(results.length > 0);
       } catch (error) {
