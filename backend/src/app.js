@@ -80,8 +80,8 @@ logger.info('🌐 CORS: 모든 Origin 허용 (개발 모드)');
  * ========================================
  */
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15분
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // 최대 100 요청
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 1 * 60 * 1000, // 1분 (기존 15분에서 단축)
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000, // 최대 1000 요청 (기존 100에서 증가)
   message: {
     success: false,
     error: {
