@@ -26,7 +26,17 @@ function PurchaseOrderUploadPage() {
   const [vendorName, setVendorName] = useState('');
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [siteName, setSiteName] = useState('');
-  const [orderDate, setOrderDate] = useState('');
+  
+  // 오늘 날짜를 기본값으로 설정
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  const [orderDate, setOrderDate] = useState(getTodayDate());
   const [memo, setMemo] = useState('');
   const [uploadedBy, setUploadedBy] = useState('');
   
@@ -342,8 +352,13 @@ function PurchaseOrderUploadPage() {
       
       alert(`✅ ${files.length}장의 이미지가 업로드되었습니다!`);
       
-      // 목록 페이지로 이동
-      navigate('/purchase-orders');
+      // 목록 페이지로 이동 (업로드한 날짜로 필터링)
+      navigate('/purchase-orders', { 
+        state: { 
+          uploadedDate: orderDate,
+          showAll: !orderDate // 날짜가 없으면 전체 보기
+        } 
+      });
       
     } catch (err) {
       console.error('❌ 업로드 실패:', err);

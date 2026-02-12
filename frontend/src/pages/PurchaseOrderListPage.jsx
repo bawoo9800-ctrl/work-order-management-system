@@ -42,12 +42,23 @@ const PurchaseOrderListPage = () => {
     fetchClients();
   }, []);
   
-  // 거래처 페이지에서 네비게이션된 경우 처리
+  // 거래처 페이지 또는 업로드 페이지에서 네비게이션된 경우 처리
   useEffect(() => {
     if (location.state?.selectedClient) {
       const client = location.state.selectedClient;
       console.log('🔍 거래처에서 선택됨:', client.name);
       setSearchQuery(client.name);
+    }
+    
+    // 업로드 후 이동한 경우
+    if (location.state?.uploadedDate) {
+      const uploadedDate = location.state.uploadedDate;
+      console.log('📤 업로드 완료, 날짜:', uploadedDate);
+      setSelectedDate(uploadedDate);
+      fetchPurchaseOrdersByDate(uploadedDate);
+    } else if (location.state?.showAll) {
+      console.log('📤 업로드 완료, 전체 보기');
+      fetchPurchaseOrdersByDate(null);
     }
   }, [location.state]);
   
