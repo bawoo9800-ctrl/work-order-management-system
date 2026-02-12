@@ -354,7 +354,7 @@ const PurchaseOrderListPage = () => {
 const styles = {
   container: {
     padding: '20px',
-    maxWidth: '1400px',
+    maxWidth: '1920px',
     margin: '0 auto',
   },
   header: {
