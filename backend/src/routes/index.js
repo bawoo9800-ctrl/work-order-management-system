@@ -12,6 +12,7 @@ import clientRoutes from './client.routes.js';
 import workOrderRoutes from './workOrder.routes.js';
 import purchaseOrderRoutes from './purchaseOrder.routes.js';
 import supplierRoutes from './supplier.routes.js';
+import siteRoutes from './site.routes.js';
 import userRoutes from './user.routes.js';
 import statsRoutes from './stats.routes.js';
 import notificationRoutes from './notification.routes.js';
@@ -33,6 +34,7 @@ router.use('/api/v1/clients', clientRoutes);
 router.use('/api/v1/work-orders', workOrderRoutes);
 router.use('/api/v1/purchase-orders', purchaseOrderRoutes);
 router.use('/api/v1/suppliers', supplierRoutes);
+router.use('/api/v1/sites', siteRoutes);
 router.use('/api/v1/users', userRoutes);
 router.use('/api/v1/stats', statsRoutes);
 router.use('/api/v1/notifications', notificationRoutes);
@@ -92,6 +94,14 @@ router.get('/api/v1', (req, res) => {
           update: 'PUT /api/v1/suppliers/:id',
           delete: 'DELETE /api/v1/suppliers/:id',
           search: 'GET /api/v1/suppliers/search',
+        },
+        sites: {
+          list: 'GET /api/v1/sites',
+          get: 'GET /api/v1/sites/:id',
+          create: 'POST /api/v1/sites',
+          update: 'PUT /api/v1/sites/:id',
+          delete: 'DELETE /api/v1/sites/:id',
+          search: 'GET /api/v1/sites/search',
         },
         notifications: {
           register: 'POST /api/v1/notifications/register',
