@@ -16,6 +16,17 @@ const ClientsPage = () => {
   const [clients, setClients] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // 거래처 추가 모달
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newClient, setNewClient] = useState({
+    code: '',
+    name: '',
+    keywords: [],
+    keywordInput: ''
+  });
+  const [addError, setAddError] = useState('');
+  const [addSuccess, setAddSuccess] = useState('');
 
   // 거래처 목록 로드
   useEffect(() => {
@@ -57,13 +68,104 @@ const ClientsPage = () => {
     navigate('/', { state: { selectedClient: client } });
   };
 
+  // 거래처 추가 모달 열기/닫기
+  const openAddModal = () => {
+    setShowAddModal(true);
+    setNewClient({ code: '', name: '', keywords: [], keywordInput: '' });
+    setAddError('');
+    setAddSuccess('');
+  };
+
+  const closeAddModal = () => {
+    setShowAddModal(false);
+    setNewClient({ code: '', name: '', keywords: [], keywordInput: '' });
+    setAddError('');
+    setAddSuccess('');
+  };
+
+  // 키워드 추가
+  const addKeyword = () => {
+    const keyword = newClient.keywordInput.trim();
+    if (keyword && !newClient.keywords.includes(keyword)) {
+      setNewClient({
+        ...newClient,
+        keywords: [...newClient.keywords, keyword],
+        keywordInput: ''
+      });
+    }
+  };
+
+  // 키워드 제거
+  const removeKeyword = (keyword) => {
+    setNewClient({
+      ...newClient,
+      keywords: newClient.keywords.filter(k => k !== keyword)
+    });
+  };
+
+  // Enter 키로 키워드 추가
+  const handleKeywordKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addKeyword();
+    }
+  };
+
+  // 거래처 추가 제출
+  const handleAddClient = async () => {
+    try {
+      setAddError('');
+      
+      // 유효성 검사
+      if (!newClient.code.trim()) {
+        setAddError('거래처 코드를 입력해주세요.');
+        return;
+      }
+      if (!newClient.name.trim()) {
+        setAddError('거래처명을 입력해주세요.');
+        return;
+      }
+      if (newClient.keywords.length === 0) {
+        setAddError('최소 1개 이상의 키워드를 추가해주세요.');
+        return;
+      }
+
+      const clientData = {
+        code: newClient.code.trim(),
+        name: newClient.name.trim(),
+        keywords: newClient.keywords,
+        aliases: [],
+        priority: 100
+      };
+
+      console.log('➕ 거래처 추가:', clientData);
+      
+      await clientAPI.create(clientData);
+      
+      setAddSuccess('거래처가 성공적으로 추가되었습니다!');
+      
+      // 1초 후 모달 닫고 목록 새로고침
+      setTimeout(() => {
+        closeAddModal();
+        fetchClients();
+      }, 1000);
+      
+    } catch (error) {
+      console.error('❌ 거래처 추가 실패:', error);
+      setAddError(error.response?.data?.error?.message || '거래처 추가에 실패했습니다.');
+    }
+  };
+
   return (
     <div className="clients-page">
       {/* 헤더 */}
       <div className="page-header">
         <h1>거래처 관리</h1>
-        <div className="header-info">
-          <span>총 {filteredClients.length}개</span>
+        <div className="header-actions">
+          <span className="header-info">총 {filteredClients.length}개</span>
+          <button className="add-client-btn" onClick={openAddModal}>
+            ➕ 거래처 추가
+          </button>
         </div>
       </div>
 
@@ -141,6 +243,77 @@ const ClientsPage = () => {
         </div>
       )}
 
+      {/* 거래처 추가 모달 */}
+      {showAddModal && (
+        <div className="modal-overlay" onClick={closeAddModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>거래처 추가</h2>
+              <button className="modal-close-btn" onClick={closeAddModal}>✕</button>
+            </div>
+            
+            <div className="modal-body">
+              {addError && <div className="error-message">❌ {addError}</div>}
+              {addSuccess && <div className="success-message">✅ {addSuccess}</div>}
+              
+              <div className="form-group">
+                <label>거래처 코드 *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="예: 1234567890"
+                  value={newClient.code}
+                  onChange={(e) => setNewClient({ ...newClient, code: e.target.value })}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>거래처명 *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="예: (주)삼성전자"
+                  value={newClient.name}
+                  onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>검색 키워드 * (최소 1개)</label>
+                <div className="keyword-input-group">
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="키워드 입력 후 Enter 또는 추가 버튼"
+                    value={newClient.keywordInput}
+                    onChange={(e) => setNewClient({ ...newClient, keywordInput: e.target.value })}
+                    onKeyPress={handleKeywordKeyPress}
+                  />
+                  <button className="keyword-add-btn" onClick={addKeyword}>추가</button>
+                </div>
+                
+                {newClient.keywords.length > 0 && (
+                  <div className="keyword-list">
+                    {newClient.keywords.map((keyword, index) => (
+                      <span key={index} className="keyword-tag">
+                        {keyword}
+                        <button onClick={() => removeKeyword(keyword)}>✕</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <p className="form-hint">💡 AI 분류 시 이 키워드로 거래처를 자동 인식합니다.</p>
+              </div>
+            </div>
+            
+            <div className="modal-footer">
+              <button className="cancel-btn" onClick={closeAddModal}>취소</button>
+              <button className="submit-btn" onClick={handleAddClient}>추가</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         .clients-page {
           padding: 20px;
@@ -164,10 +337,34 @@ const ClientsPage = () => {
           color: #000;
         }
 
+        .header-actions {
+          display: flex;
+          align-items: center;
+          gap: 15px;
+        }
+
         .header-info {
           font-size: 16px;
           font-weight: 600;
           color: #666;
+        }
+
+        .add-client-btn {
+          padding: 10px 20px;
+          font-size: 15px;
+          font-weight: 600;
+          color: white;
+          background: #4CAF50;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .add-client-btn:hover {
+          background: #45a049;
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
         }
 
         .search-section {
@@ -328,6 +525,215 @@ const ClientsPage = () => {
           padding: 80px 20px;
           color: #999;
           font-size: 16px;
+        }
+
+        /* 모달 스타일 */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        }
+
+        .modal-content {
+          background: white;
+          border-radius: 16px;
+          width: 90%;
+          max-width: 500px;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px 24px;
+          border-bottom: 1px solid #e0e0e0;
+        }
+
+        .modal-header h2 {
+          margin: 0;
+          font-size: 20px;
+          font-weight: 700;
+        }
+
+        .modal-close-btn {
+          width: 32px;
+          height: 32px;
+          border: none;
+          background: #f5f5f5;
+          border-radius: 50%;
+          cursor: pointer;
+          font-size: 18px;
+          transition: all 0.2s;
+        }
+
+        .modal-close-btn:hover {
+          background: #e0e0e0;
+        }
+
+        .modal-body {
+          padding: 24px;
+        }
+
+        .form-group {
+          margin-bottom: 20px;
+        }
+
+        .form-group label {
+          display: block;
+          margin-bottom: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          color: #333;
+        }
+
+        .form-input {
+          width: 100%;
+          padding: 12px;
+          font-size: 15px;
+          border: 2px solid #e0e0e0;
+          border-radius: 8px;
+          transition: border-color 0.2s;
+          font-family: inherit;
+        }
+
+        .form-input:focus {
+          outline: none;
+          border-color: #4CAF50;
+        }
+
+        .keyword-input-group {
+          display: flex;
+          gap: 8px;
+        }
+
+        .keyword-add-btn {
+          padding: 12px 20px;
+          font-size: 14px;
+          font-weight: 600;
+          color: white;
+          background: #2196F3;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s;
+          white-space: nowrap;
+        }
+
+        .keyword-add-btn:hover {
+          background: #1976D2;
+        }
+
+        .keyword-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 12px;
+        }
+
+        .keyword-tag {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          background: #e3f2fd;
+          color: #1976D2;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 500;
+        }
+
+        .keyword-tag button {
+          background: none;
+          border: none;
+          color: #1976D2;
+          cursor: pointer;
+          font-size: 16px;
+          padding: 0;
+          width: 16px;
+          height: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .keyword-tag button:hover {
+          color: #0d47a1;
+        }
+
+        .form-hint {
+          margin-top: 8px;
+          font-size: 13px;
+          color: #666;
+        }
+
+        .error-message {
+          padding: 12px;
+          background: #ffebee;
+          color: #c62828;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          font-size: 14px;
+        }
+
+        .success-message {
+          padding: 12px;
+          background: #e8f5e9;
+          color: #2e7d32;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          font-size: 14px;
+        }
+
+        .modal-footer {
+          display: flex;
+          justify-content: flex-end;
+          gap: 12px;
+          padding: 20px 24px;
+          border-top: 1px solid #e0e0e0;
+        }
+
+        .cancel-btn {
+          padding: 10px 24px;
+          font-size: 15px;
+          font-weight: 600;
+          color: #666;
+          background: #f5f5f5;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .cancel-btn:hover {
+          background: #e0e0e0;
+        }
+
+        .submit-btn {
+          padding: 10px 24px;
+          font-size: 15px;
+          font-weight: 600;
+          color: white;
+          background: #4CAF50;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .submit-btn:hover {
+          background: #45a049;
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
         }
 
         /* 반응형 */

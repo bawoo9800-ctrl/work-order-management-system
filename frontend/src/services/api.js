@@ -191,6 +191,12 @@ export const clientAPI = {
     const response = await apiClient.get('/api/v1/clients/stats');
     return response.data;
   },
+
+  // 거래처 생성
+  create: async (clientData) => {
+    const response = await apiClient.post('/api/v1/clients', clientData);
+    return response.data;
+  },
 };
 
 /**
