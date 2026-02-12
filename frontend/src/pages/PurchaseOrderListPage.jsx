@@ -245,11 +245,12 @@ const PurchaseOrderListPage = () => {
           </button>
         </div>
       ) : (
-        <div style={styles.grid}>
+        <div style={styles.grid} className="purchase-order-grid">
           {filteredOrders.map(order => (
             <div 
               key={order.id} 
               style={styles.card}
+              className="purchase-order-card"
               onClick={() => handleImageClick(order)}
             >
               {/* 이미지 */}
@@ -418,16 +419,20 @@ const styles = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-    gap: '16px',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+    gap: '24px',
+    paddingBottom: '40px',
+    maxWidth: '1920px',
+    margin: '0 auto',
   },
   card: {
     backgroundColor: 'white',
-    borderRadius: '12px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    border: '1px solid #ddd',
+    borderRadius: '8px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
     overflow: 'hidden',
     cursor: 'pointer',
-    transition: 'transform 0.2s, box-shadow 0.2s',
+    transition: 'all 0.2s',
   },
   imageContainer: {
     position: 'relative',
@@ -494,5 +499,63 @@ const styles = {
     paddingTop: '10px',
   },
 };
+
+// 미디어 쿼리를 위한 CSS 추가
+const responsiveStyles = `
+  /* 대형 데스크톱 (1920px+) */
+  @media (min-width: 1920px) {
+    .purchase-order-grid {
+      grid-template-columns: repeat(5, 1fr) !important;
+      max-width: 1920px;
+    }
+  }
+  
+  /* 일반 데스크톱 (1440-1919px) */
+  @media (min-width: 1440px) and (max-width: 1919px) {
+    .purchase-order-grid {
+      grid-template-columns: repeat(4, 1fr) !important;
+    }
+  }
+  
+  /* 소형 데스크톱/태블릿 (1024-1439px) */
+  @media (min-width: 1024px) and (max-width: 1439px) {
+    .purchase-order-grid {
+      grid-template-columns: repeat(3, 1fr) !important;
+    }
+  }
+  
+  /* 태블릿 (768-1023px) */
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .purchase-order-grid {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+  }
+  
+  /* 모바일 (767px 이하) */
+  @media (max-width: 767px) {
+    .purchase-order-grid {
+      grid-template-columns: 1fr !important;
+      gap: 16px !important;
+    }
+  }
+  
+  /* 카드 hover 효과 */
+  .purchase-order-card:hover {
+    border-color: #999 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    transform: translateY(-2px) !important;
+  }
+`;
+
+// 스타일 태그를 DOM에 추가
+if (typeof document !== 'undefined') {
+  const styleId = 'purchase-order-responsive-styles';
+  if (!document.getElementById(styleId)) {
+    const styleTag = document.createElement('style');
+    styleTag.id = styleId;
+    styleTag.textContent = responsiveStyles;
+    document.head.appendChild(styleTag);
+  }
+}
 
 export default PurchaseOrderListPage;
