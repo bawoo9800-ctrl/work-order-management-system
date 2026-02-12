@@ -17,7 +17,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 const PurchaseOrderListPage = () => {
   const navigate = useNavigate();
   const [purchaseOrders, setPurchaseOrders] = useState([]);
-  const [suppliers, setSuppliers] = useState([]);
+  const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -35,7 +35,7 @@ const PurchaseOrderListPage = () => {
   // 초기 데이터 로딩
   useEffect(() => {
     fetchPurchaseOrders();
-    fetchSuppliers();
+    fetchClients();
   }, []);
   
   // 발주서 조회
@@ -53,13 +53,13 @@ const PurchaseOrderListPage = () => {
     }
   };
   
-  // 발주처 조회
-  const fetchSuppliers = async () => {
+  // 거래처 조회
+  const fetchClients = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/v1/suppliers`);
-      setSuppliers(response.data?.data || []);
+      const response = await axios.get(`${API_BASE_URL}/api/v1/clients`);
+      setClients(response.data?.data || []);
     } catch (error) {
-      console.error('❌ 발주처 로드 실패:', error);
+      console.error('❌ 거래처 로드 실패:', error);
     }
   };
   
@@ -278,7 +278,7 @@ const PurchaseOrderListPage = () => {
           workOrder={zoomedOrder}
           onUpdateWorkOrder={handleUpdatePurchaseOrder}
           onDeleteWorkOrder={handleDeletePurchaseOrder}
-          clients={suppliers}
+          clients={clients}
         />
       )}
     </div>
