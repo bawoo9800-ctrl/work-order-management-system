@@ -288,6 +288,7 @@ const PurchaseOrderListPage = () => {
           onUpdateWorkOrder={handleUpdatePurchaseOrder}
           onDeleteWorkOrder={handleDeletePurchaseOrder}
           clients={clients}
+          type="purchaseOrder"
         />
       )}
     </div>

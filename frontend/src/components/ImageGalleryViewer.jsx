@@ -22,7 +22,8 @@ function ImageGalleryViewer({
   workOrder = null,
   onUpdateWorkOrder = null,
   onDeleteWorkOrder = null,
-  clients = []
+  clients = [],
+  type = 'workOrder' // 'workOrder' 또는 'purchaseOrder'
 }) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [scale, setScale] = useState(1);
@@ -42,13 +43,22 @@ function ImageGalleryViewer({
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [filteredClients, setFilteredClients] = useState([]);
   
-  // 작업지시서 폼 상태
-  const [modalForm, setModalForm] = useState({
-    work_type: '',
-    client_name: '',
-    site_name: '',
-    memo: ''
-  });
+  // 폼 상태 (타입에 따라 다름)
+  const [modalForm, setModalForm] = useState(
+    type === 'purchaseOrder' 
+      ? {
+          supplier_name: '',
+          site_name: '',
+          order_date: '',
+          memo: ''
+        }
+      : {
+          work_type: '',
+          client_name: '',
+          site_name: '',
+          memo: ''
+        }
+  );
   
   const imageRef = useRef(null);
   const containerRef = useRef(null);
@@ -74,17 +84,26 @@ function ImageGalleryViewer({
     };
   }, []);
   
-  // 작업지시서 정보 초기화
+  // 작업지시서/발주서 정보 초기화
   useEffect(() => {
     if (workOrder) {
-      setModalForm({
-        work_type: workOrder.work_type || '',
-        client_name: workOrder.client_name || '',
-        site_name: workOrder.site_name || '',
-        memo: workOrder.memo || ''
-      });
+      if (type === 'purchaseOrder') {
+        setModalForm({
+          supplier_name: workOrder.supplier_name || '',
+          site_name: workOrder.site_name || '',
+          order_date: workOrder.order_date ? workOrder.order_date.split('T')[0] : '',
+          memo: workOrder.memo || ''
+        });
+      } else {
+        setModalForm({
+          work_type: workOrder.work_type || '',
+          client_name: workOrder.client_name || '',
+          site_name: workOrder.site_name || '',
+          memo: workOrder.memo || ''
+        });
+      }
     }
-  }, [workOrder]);
+  }, [workOrder, type]);
   
   // 현재 이미지
   const currentImage = images[currentIndex];
@@ -323,10 +342,15 @@ function ImageGalleryViewer({
     }
   };
   
-  // 거래처명 입력 핸들러 (자동완성)
+  // 거래처명/발주처명 입력 핸들러 (자동완성)
   const handleClientNameChange = (e) => {
     const value = e.target.value;
-    setModalForm({ ...modalForm, client_name: value });
+    
+    if (type === 'purchaseOrder') {
+      setModalForm({ ...modalForm, supplier_name: value });
+    } else {
+      setModalForm({ ...modalForm, client_name: value });
+    }
     
     // 자동완성 필터링
     if (value.trim() && clients.length > 0) {
@@ -346,7 +370,11 @@ function ImageGalleryViewer({
   
   // 자동완성 항목 선택
   const handleSelectClient = (clientName) => {
-    setModalForm({ ...modalForm, client_name: clientName });
+    if (type === 'purchaseOrder') {
+      setModalForm({ ...modalForm, supplier_name: clientName });
+    } else {
+      setModalForm({ ...modalForm, client_name: clientName });
+    }
     setShowAutocomplete(false);
     setFilteredClients([]);
   };
@@ -499,69 +527,74 @@ function ImageGalleryViewer({
           </div>
         </div>
         
-        {/* 우측: 작업지시서 정보 */}
+        {/* 우측: 작업지시서/발주서 정보 */}
         {workOrder && (
           <div className="gallery-right">
             <div className="gallery-header">
-              <h3>작업지시서 상세</h3>
+              <h3>{type === 'purchaseOrder' ? '발주서 상세' : '작업지시서 상세'}</h3>
               <button className="btn-close-gallery" onClick={onClose}>
                 ✕
               </button>
             </div>
             
             <div className="gallery-form">
-              {/* 작업 유형 */}
-              <div className="form-group">
-                <label className="form-label">작업 유형</label>
-                <div className="radio-group">
-                  <label className="radio-label">
-                    <input
-                      type="radio"
-                      name="work_type"
-                      value="FSD"
-                      checked={modalForm.work_type === 'FSD'}
-                      onChange={(e) => setModalForm({ ...modalForm, work_type: e.target.value })}
-                    />
-                    <span>FSD</span>
-                  </label>
-                  <label className="radio-label">
-                    <input
-                      type="radio"
-                      name="work_type"
-                      value="SD"
-                      checked={modalForm.work_type === 'SD'}
-                      onChange={(e) => setModalForm({ ...modalForm, work_type: e.target.value })}
-                    />
-                    <span>SD</span>
-                  </label>
-                  <label className="radio-label">
-                    <input
-                      type="radio"
-                      name="work_type"
-                      value="기타"
-                      checked={modalForm.work_type === '기타'}
-                      onChange={(e) => setModalForm({ ...modalForm, work_type: e.target.value })}
-                    />
-                    <span>기타</span>
-                  </label>
+              {/* 작업 유형 (작업지시서만) */}
+              {type === 'workOrder' && (
+                <div className="form-group">
+                  <label className="form-label">작업 유형</label>
+                  <div className="radio-group">
+                    <label className="radio-label">
+                      <input
+                        type="radio"
+                        name="work_type"
+                        value="FSD"
+                        checked={modalForm.work_type === 'FSD'}
+                        onChange={(e) => setModalForm({ ...modalForm, work_type: e.target.value })}
+                      />
+                      <span>FSD</span>
+                    </label>
+                    <label className="radio-label">
+                      <input
+                        type="radio"
+                        name="work_type"
+                        value="SD"
+                        checked={modalForm.work_type === 'SD'}
+                        onChange={(e) => setModalForm({ ...modalForm, work_type: e.target.value })}
+                      />
+                      <span>SD</span>
+                    </label>
+                    <label className="radio-label">
+                      <input
+                        type="radio"
+                        name="work_type"
+                        value="기타"
+                        checked={modalForm.work_type === '기타'}
+                        onChange={(e) => setModalForm({ ...modalForm, work_type: e.target.value })}
+                      />
+                      <span>기타</span>
+                    </label>
+                  </div>
                 </div>
-              </div>
+              )}
               
-              {/* 거래처명 */}
+              {/* 거래처명 (작업지시서) / 발주처명 (발주서) */}
               <div className="form-group">
-                <label className="form-label">거래처명</label>
+                <label className="form-label">
+                  {type === 'purchaseOrder' ? '발주처명' : '거래처명'}
+                </label>
                 <div className="autocomplete-wrapper">
                   <input
                     type="text"
                     className="form-input"
-                    value={modalForm.client_name}
+                    value={type === 'purchaseOrder' ? modalForm.supplier_name : modalForm.client_name}
                     onChange={handleClientNameChange}
                     onFocus={() => {
-                      if (modalForm.client_name && filteredClients.length > 0) {
+                      const currentValue = type === 'purchaseOrder' ? modalForm.supplier_name : modalForm.client_name;
+                      if (currentValue && filteredClients.length > 0) {
                         setShowAutocomplete(true);
                       }
                     }}
-                    placeholder="거래처명을 입력하세요"
+                    placeholder={type === 'purchaseOrder' ? '발주처명을 입력하세요' : '거래처명을 입력하세요'}
                   />
                   
                   {/* 자동완성 드롭다운 */}
@@ -580,6 +613,19 @@ function ImageGalleryViewer({
                   )}
                 </div>
               </div>
+              
+              {/* 발주일 (발주서만) */}
+              {type === 'purchaseOrder' && (
+                <div className="form-group">
+                  <label className="form-label">발주일</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={modalForm.order_date}
+                    onChange={(e) => setModalForm({ ...modalForm, order_date: e.target.value })}
+                  />
+                </div>
+              )}
               
               {/* 현장명 */}
               <div className="form-group">
