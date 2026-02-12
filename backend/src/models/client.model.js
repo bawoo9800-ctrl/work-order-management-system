@@ -341,3 +341,33 @@ export const bulkCreateClients = async (clients) => {
   
   return affectedRows;
 };
+
+/**
+ * 거래처별 작업지시서 개수 조회
+ * @param {number} clientId - 거래처 ID
+ * @returns {Promise<number>} 작업지시서 개수
+ */
+export const getWorkOrderCountByClient = async (clientId) => {
+  const sql = `
+    SELECT COUNT(*) as count
+    FROM work_orders
+    WHERE client_id = ? AND deleted_at IS NULL
+  `;
+  const result = await queryOne(sql, [clientId]);
+  return result?.count || 0;
+};
+
+/**
+ * 거래처별 발주서 개수 조회 (supplier_name 기준)
+ * @param {string} clientName - 거래처명
+ * @returns {Promise<number>} 발주서 개수
+ */
+export const getPurchaseOrderCountByClient = async (clientName) => {
+  const sql = `
+    SELECT COUNT(*) as count
+    FROM purchase_orders
+    WHERE supplier_name = ? AND status != 'cancelled'
+  `;
+  const result = await queryOne(sql, [clientName]);
+  return result?.count || 0;
+};

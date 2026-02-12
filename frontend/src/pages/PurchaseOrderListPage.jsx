@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import ImageGalleryViewer from '../components/ImageGalleryViewer';
 
@@ -16,6 +16,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 const PurchaseOrderListPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -37,6 +38,15 @@ const PurchaseOrderListPage = () => {
     fetchPurchaseOrders();
     fetchClients();
   }, []);
+  
+  // 거래처 페이지에서 네비게이션된 경우 처리
+  useEffect(() => {
+    if (location.state?.selectedClient) {
+      const client = location.state.selectedClient;
+      console.log('🔍 거래처에서 선택됨:', client.name);
+      setSearchQuery(client.name);
+    }
+  }, [location.state]);
   
   // 발주서 조회
   const fetchPurchaseOrders = async (params = {}) => {
@@ -66,7 +76,7 @@ const PurchaseOrderListPage = () => {
   // 검색 필터링
   const filteredOrders = purchaseOrders.filter(order => {
     const matchSearch = !searchQuery || 
-      order.vendor_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.supplier_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.memo?.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchStatus = !filters.status || order.status === filters.status;

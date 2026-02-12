@@ -16,7 +16,7 @@ import logger from '../utils/logger.js';
 import xlsx from 'xlsx';
 
 /**
- * 모든 거래처 조회
+ * 모든 거래처 조회 (통계 포함)
  * GET /api/v1/clients
  * Query: ?active=true/false
  */
@@ -25,11 +25,27 @@ export const getClients = async (req, res) => {
   
   const clients = await ClientModel.getAllClients(activeOnly);
   
+  // 각 거래처별 작업지시서 및 발주서 개수 조회
+  const clientsWithStats = await Promise.all(
+    clients.map(async (client) => {
+      // 작업지시서 개수
+      const workOrderCount = await ClientModel.getWorkOrderCountByClient(client.id);
+      // 발주서 개수
+      const purchaseOrderCount = await ClientModel.getPurchaseOrderCountByClient(client.name);
+      
+      return {
+        ...client,
+        work_order_count: workOrderCount || 0,
+        purchase_order_count: purchaseOrderCount || 0,
+      };
+    })
+  );
+  
   res.json({
     success: true,
     data: {
-      clients,
-      count: clients.length,
+      clients: clientsWithStats,
+      count: clientsWithStats.length,
     },
     error: null,
   });

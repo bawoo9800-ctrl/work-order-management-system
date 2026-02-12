@@ -41,8 +41,19 @@ const ClientsPage = () => {
     client.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // 거래처 클릭 시 홈으로 이동 (해당 거래처 작업지시서 표시)
+  // 거래처 클릭 핸들러 (타입에 따라 다른 페이지로 이동)
+  const handleWorkOrderClick = (client, e) => {
+    e.stopPropagation();
+    navigate('/', { state: { selectedClient: client } });
+  };
+
+  const handlePurchaseOrderClick = (client, e) => {
+    e.stopPropagation();
+    navigate('/purchase-orders', { state: { selectedClient: client } });
+  };
+
   const handleClientClick = (client) => {
+    // 카드 전체 클릭 시 작업지시서로 이동
     navigate('/', { state: { selectedClient: client } });
   };
 
@@ -100,6 +111,29 @@ const ClientsPage = () => {
                 <div className="client-name">{client.name}</div>
                 <div className="client-meta">
                   <span className="client-id">ID: {client.id}</span>
+                </div>
+                
+                {/* 통계 섹션 */}
+                <div className="client-stats">
+                  <div 
+                    className="stat-item work-order-stat"
+                    onClick={(e) => handleWorkOrderClick(client, e)}
+                    title="작업지시서 보기"
+                  >
+                    <span className="stat-icon">📋</span>
+                    <span className="stat-label">작업지시서</span>
+                    <span className="stat-count">{client.work_order_count || 0}</span>
+                  </div>
+                  
+                  <div 
+                    className="stat-item purchase-order-stat"
+                    onClick={(e) => handlePurchaseOrderClick(client, e)}
+                    title="발주서 보기"
+                  >
+                    <span className="stat-icon">📦</span>
+                    <span className="stat-label">발주서</span>
+                    <span className="stat-count">{client.purchase_order_count || 0}</span>
+                  </div>
                 </div>
               </div>
             ))
@@ -232,10 +266,60 @@ const ClientsPage = () => {
         .client-meta {
           font-size: 13px;
           color: #999;
+          margin-bottom: 12px;
         }
 
         .client-id {
           font-family: monospace;
+        }
+
+        /* 통계 섹션 */
+        .client-stats {
+          display: flex;
+          gap: 8px;
+          margin-top: 12px;
+        }
+
+        .stat-item {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          padding: 10px 8px;
+          background: #f8f8f8;
+          border-radius: 8px;
+          transition: all 0.2s;
+          cursor: pointer;
+        }
+
+        .stat-item:hover {
+          background: #e8e8e8;
+          transform: scale(1.05);
+        }
+
+        .work-order-stat:hover {
+          background: #e3f2fd;
+        }
+
+        .purchase-order-stat:hover {
+          background: #e8f5e9;
+        }
+
+        .stat-icon {
+          font-size: 20px;
+        }
+
+        .stat-label {
+          font-size: 11px;
+          color: #666;
+          font-weight: 500;
+        }
+
+        .stat-count {
+          font-size: 18px;
+          font-weight: 700;
+          color: #000;
         }
 
         .empty-state {

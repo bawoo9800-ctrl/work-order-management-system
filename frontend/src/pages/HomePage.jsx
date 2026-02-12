@@ -59,6 +59,16 @@ const HomePage = () => {
     fetchClients();
   }, []);
   
+  // 거래처 페이지에서 네비게이션된 경우 처리
+  useEffect(() => {
+    if (location.state?.selectedClient) {
+      const client = location.state.selectedClient;
+      console.log('🔍 거래처에서 선택됨:', client.name);
+      setSearchQuery(client.name);
+      fetchWorkOrdersByDate(null); // 전체 작업지시서 로드
+    }
+  }, [location.state]);
+  
   // WebSocket 알림 처리
   useEffect(() => {
     const handleWorkOrderUpdate = (event) => {
