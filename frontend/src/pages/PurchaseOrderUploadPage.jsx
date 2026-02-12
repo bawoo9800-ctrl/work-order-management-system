@@ -28,9 +28,9 @@ function PurchaseOrderUploadPage() {
   const [memo, setMemo] = useState('');
   const [uploadedBy, setUploadedBy] = useState('');
   
-  // 발주처 자동완성
+  // 발주처(거래처) 자동완성
   const [showAutocomplete, setShowAutocomplete] = useState(false);
-  const [filteredSuppliers, setFilteredSuppliers] = useState([]);
+  const [filteredClients, setFilteredClients] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   
   useEffect(() => {
@@ -41,7 +41,7 @@ function PurchaseOrderUploadPage() {
     }
   }, []);
   
-  // 발주처 검색 (API 직접 호출)
+  // 발주처(거래처) 검색
   const handleVendorSearch = async (value) => {
     setVendorName(value);
     
@@ -49,23 +49,23 @@ function PurchaseOrderUploadPage() {
       try {
         setIsSearching(true);
         const response = await axios.get(
-          `${API_BASE_URL}/api/v1/suppliers/search?q=${encodeURIComponent(value)}&limit=10`
+          `${API_BASE_URL}/api/v1/clients/search?q=${encodeURIComponent(value)}`
         );
         
-        console.log('🔍 발주처 검색 결과:', response.data);
+        console.log('🔍 거래처 검색 결과:', response.data);
         
         const results = response.data?.data || [];
-        setFilteredSuppliers(results);
+        setFilteredClients(results);
         setShowAutocomplete(results.length > 0);
       } catch (error) {
-        console.error('❌ 발주처 검색 실패:', error);
-        setFilteredSuppliers([]);
+        console.error('❌ 거래처 검색 실패:', error);
+        setFilteredClients([]);
         setShowAutocomplete(false);
       } finally {
         setIsSearching(false);
       }
     } else {
-      setFilteredSuppliers([]);
+      setFilteredClients([]);
       setShowAutocomplete(false);
     }
   };
@@ -242,32 +242,27 @@ function PurchaseOrderUploadPage() {
                 }
               }}
               onBlur={() => setTimeout(() => setShowAutocomplete(false), 300)}
-              placeholder="발주처명 입력 (예: ABC, 한국)"
+              placeholder="발주처명 입력 (거래처 검색)"
               style={styles.input}
             />
             
-            {showAutocomplete && filteredSuppliers.length > 0 && (
+            {showAutocomplete && filteredClients.length > 0 && (
               <div style={styles.autocomplete}>
-                {filteredSuppliers.map(supplier => (
+                {filteredClients.map(client => (
                   <div
-                    key={supplier.id}
+                    key={client.id}
                     onClick={() => {
-                      setVendorName(supplier.name);
+                      setVendorName(client.name);
                       setShowAutocomplete(false);
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                     style={styles.autocompleteItem}
                   >
-                    <div style={{ fontWeight: 'bold' }}>{supplier.name}</div>
-                    {supplier.contact_person && (
+                    <div style={{ fontWeight: 'bold' }}>{client.name}</div>
+                    {client.code && (
                       <div style={{ fontSize: '12px', color: '#666' }}>
-                        담당자: {supplier.contact_person}
-                      </div>
-                    )}
-                    {supplier.phone && (
-                      <div style={{ fontSize: '12px', color: '#666' }}>
-                        연락처: {supplier.phone}
+                        거래처코드: {client.code}
                       </div>
                     )}
                   </div>
