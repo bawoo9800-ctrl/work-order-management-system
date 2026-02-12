@@ -183,7 +183,7 @@ export const insert = async (sql, params = []) => {
 export const execute = async (sql, params = []) => {
   try {
     const [result] = await pool.execute(sql, params);
-    return result.affectedRows;
+    return result;
   } catch (error) {
     logger.error('쿼리 실행 실패', {
       sql,
