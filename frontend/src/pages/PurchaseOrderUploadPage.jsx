@@ -10,7 +10,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { siteAPI } from '../services/api';
+import { siteAPI, clientAPI } from '../services/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -39,6 +39,26 @@ function PurchaseOrderUploadPage() {
   const [showSiteAutocomplete, setShowSiteAutocomplete] = useState(false);
   const [filteredSites, setFilteredSites] = useState([]);
   const [isSearchingSite, setIsSearchingSite] = useState(false);
+  
+  // 거래처 추가 모달
+  const [showClientModal, setShowClientModal] = useState(false);
+  const [clientFormData, setClientFormData] = useState({
+    code: '',
+    name: '',
+    keywords: [],
+  });
+  const [keywordInput, setKeywordInput] = useState('');
+  
+  // 현장 추가 모달
+  const [showSiteModal, setShowSiteModal] = useState(false);
+  const [siteFormData, setSiteFormData] = useState({
+    client_id: '',
+    name: '',
+    address: '',
+    manager: '',
+    phone: '',
+    notes: '',
+  });
   
   useEffect(() => {
     // 로컬스토리지에서 업로더 이름 불러오기
@@ -126,6 +146,124 @@ function PurchaseOrderUploadPage() {
       console.log(`📍 거래처 ${clientId}의 현장 목록:`, sites);
     } catch (error) {
       console.error('❌ 현장 목록 로드 실패:', error);
+    }
+  };
+  
+  // 거래처 추가 모달 열기
+  const handleOpenClientModal = () => {
+    setClientFormData({
+      code: '',
+      name: '',
+      keywords: [],
+    });
+    setKeywordInput('');
+    setShowClientModal(true);
+  };
+  
+  // 키워드 추가
+  const handleAddKeyword = () => {
+    const keyword = keywordInput.trim();
+    if (keyword && !clientFormData.keywords.includes(keyword)) {
+      setClientFormData({
+        ...clientFormData,
+        keywords: [...clientFormData.keywords, keyword],
+      });
+      setKeywordInput('');
+    }
+  };
+  
+  // 키워드 삭제
+  const handleRemoveKeyword = (index) => {
+    setClientFormData({
+      ...clientFormData,
+      keywords: clientFormData.keywords.filter((_, i) => i !== index),
+    });
+  };
+  
+  // 거래처 저장
+  const handleSaveClient = async () => {
+    try {
+      if (!clientFormData.code.trim()) {
+        alert('거래처 코드를 입력해주세요.');
+        return;
+      }
+      if (!clientFormData.name.trim()) {
+        alert('거래처명을 입력해주세요.');
+        return;
+      }
+      if (clientFormData.keywords.length === 0) {
+        alert('최소 1개의 키워드를 입력해주세요.');
+        return;
+      }
+      
+      const response = await clientAPI.create({
+        code: clientFormData.code,
+        name: clientFormData.name,
+        keywords: clientFormData.keywords,
+        aliases: [],
+        priority: 100,
+      });
+      
+      console.log('✅ 거래처 추가 성공:', response);
+      
+      // 추가된 거래처를 자동으로 선택
+      const newClient = response?.data?.client;
+      if (newClient) {
+        setVendorName(newClient.name);
+        setSelectedClientId(newClient.id);
+      }
+      
+      alert('✅ 거래처가 성공적으로 추가되었습니다!');
+      setShowClientModal(false);
+    } catch (error) {
+      console.error('❌ 거래처 추가 실패:', error);
+      alert('거래처 추가에 실패했습니다: ' + (error.response?.data?.message || error.message));
+    }
+  };
+  
+  // 현장 추가 모달 열기
+  const handleOpenSiteModal = () => {
+    if (!selectedClientId) {
+      alert('먼저 발주처(거래처)를 선택해주세요.');
+      return;
+    }
+    
+    setSiteFormData({
+      client_id: selectedClientId,
+      name: '',
+      address: '',
+      manager: '',
+      phone: '',
+      notes: '',
+    });
+    setShowSiteModal(true);
+  };
+  
+  // 현장 저장
+  const handleSaveSite = async () => {
+    try {
+      if (!siteFormData.name.trim()) {
+        alert('현장명을 입력해주세요.');
+        return;
+      }
+      
+      const response = await siteAPI.create(siteFormData);
+      
+      console.log('✅ 현장 추가 성공:', response);
+      
+      // 추가된 현장을 자동으로 선택
+      const newSite = response?.data?.site;
+      if (newSite) {
+        setSiteName(newSite.name);
+        // 현장 목록 새로고침
+        fetchClientSites(selectedClientId);
+      }
+      
+      alert('✅ 현장이 성공적으로 추가되었습니다!');
+      setShowSiteModal(false);
+    } catch (error) {
+      console.error('❌ 현장 추가 실패:', error);
+      alert('현장 추가에 실패했습니다: ' + (error.response?.data?.message || error.message));
     }
   };
   
@@ -287,9 +425,18 @@ function PurchaseOrderUploadPage() {
         <h2 style={styles.sectionTitle}>📋 발주 정보</h2>
         
         <div style={styles.formGroup}>
-          <label style={styles.label}>
-            발주처 (선택) {isSearching && <span style={{ color: '#2196F3', fontSize: '12px' }}>검색 중...</span>}
-          </label>
+          <div style={styles.labelWithButton}>
+            <label style={styles.label}>
+              발주처 (선택) {isSearching && <span style={{ color: '#2196F3', fontSize: '12px' }}>검색 중...</span>}
+            </label>
+            <button
+              type="button"
+              onClick={handleOpenClientModal}
+              style={styles.addButton}
+            >
+              ➕ 거래처 추가
+            </button>
+          </div>
           <div style={{ position: 'relative' }}>
             <input
               type="text"
@@ -329,9 +476,19 @@ function PurchaseOrderUploadPage() {
         </div>
         
         <div style={styles.formGroup}>
-          <label style={styles.label}>
-            현장명 (선택) {isSearchingSite && <span style={{ color: '#2196F3', fontSize: '12px' }}>검색 중...</span>}
-          </label>
+          <div style={styles.labelWithButton}>
+            <label style={styles.label}>
+              현장명 (선택) {isSearchingSite && <span style={{ color: '#2196F3', fontSize: '12px' }}>검색 중...</span>}
+            </label>
+            <button
+              type="button"
+              onClick={handleOpenSiteModal}
+              style={styles.addButton}
+              disabled={!selectedClientId}
+            >
+              ➕ 현장 추가
+            </button>
+          </div>
           <div style={{ position: 'relative' }}>
             <input
               type="text"
@@ -438,6 +595,211 @@ function PurchaseOrderUploadPage() {
       >
         {uploading ? '업로드 중...' : `📤 발주서 업로드 (${files.length}장)`}
       </button>
+      
+      {/* 거래처 추가 모달 */}
+      {showClientModal && (
+        <div style={styles.modal}>
+          <div style={styles.modalContent}>
+            <div style={styles.modalHeader}>
+              <h2 style={styles.modalTitle}>➕ 거래처 추가</h2>
+              <button
+                onClick={() => setShowClientModal(false)}
+                style={styles.closeButton}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={styles.modalBody}>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>거래처 코드 (사업자번호 10자리) *</label>
+                <input
+                  type="text"
+                  value={clientFormData.code}
+                  onChange={(e) => setClientFormData({ ...clientFormData, code: e.target.value })}
+                  placeholder="예: 1234567890"
+                  maxLength={10}
+                  style={styles.input}
+                  required
+                />
+              </div>
+
+              <div style={styles.formGroup}>
+                <label style={styles.label}>거래처명 *</label>
+                <input
+                  type="text"
+                  value={clientFormData.name}
+                  onChange={(e) => setClientFormData({ ...clientFormData, name: e.target.value })}
+                  placeholder="예: (주)삼성전자"
+                  style={styles.input}
+                  required
+                />
+              </div>
+
+              <div style={styles.formGroup}>
+                <label style={styles.label}>검색 키워드 (최소 1개) *</label>
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                  <input
+                    type="text"
+                    value={keywordInput}
+                    onChange={(e) => setKeywordInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddKeyword();
+                      }
+                    }}
+                    placeholder="키워드 입력 후 엔터"
+                    style={{ ...styles.input, flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddKeyword}
+                    style={styles.keywordAddButton}
+                  >
+                    추가
+                  </button>
+                </div>
+                
+                <div style={styles.keywordList}>
+                  {clientFormData.keywords.map((keyword, index) => (
+                    <div key={index} style={styles.keywordTag}>
+                      <span>{keyword}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveKeyword(index)}
+                        style={styles.keywordRemoveButton}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                  {clientFormData.keywords.length === 0 && (
+                    <div style={{ fontSize: '12px', color: '#999' }}>
+                      키워드를 추가해주세요 (예: 삼성, 삼성전자, Samsung)
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div style={styles.modalFooter}>
+              <button
+                onClick={() => setShowClientModal(false)}
+                style={styles.cancelButton}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSaveClient}
+                style={styles.saveButton}
+              >
+                추가
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* 현장 추가 모달 */}
+      {showSiteModal && (
+        <div style={styles.modal}>
+          <div style={styles.modalContent}>
+            <div style={styles.modalHeader}>
+              <h2 style={styles.modalTitle}>➕ 현장 추가</h2>
+              <button
+                onClick={() => setShowSiteModal(false)}
+                style={styles.closeButton}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={styles.modalBody}>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>거래처</label>
+                <input
+                  type="text"
+                  value={vendorName}
+                  disabled
+                  style={{ ...styles.input, backgroundColor: '#f5f5f5' }}
+                />
+              </div>
+
+              <div style={styles.formGroup}>
+                <label style={styles.label}>현장명 *</label>
+                <input
+                  type="text"
+                  value={siteFormData.name}
+                  onChange={(e) => setSiteFormData({ ...siteFormData, name: e.target.value })}
+                  placeholder="현장명 입력"
+                  style={styles.input}
+                  required
+                />
+              </div>
+
+              <div style={styles.formGroup}>
+                <label style={styles.label}>주소</label>
+                <input
+                  type="text"
+                  value={siteFormData.address}
+                  onChange={(e) => setSiteFormData({ ...siteFormData, address: e.target.value })}
+                  placeholder="주소 입력"
+                  style={styles.input}
+                />
+              </div>
+
+              <div style={styles.formGroup}>
+                <label style={styles.label}>담당자</label>
+                <input
+                  type="text"
+                  value={siteFormData.manager}
+                  onChange={(e) => setSiteFormData({ ...siteFormData, manager: e.target.value })}
+                  placeholder="담당자 이름"
+                  style={styles.input}
+                />
+              </div>
+
+              <div style={styles.formGroup}>
+                <label style={styles.label}>연락처</label>
+                <input
+                  type="tel"
+                  value={siteFormData.phone}
+                  onChange={(e) => setSiteFormData({ ...siteFormData, phone: e.target.value })}
+                  placeholder="연락처 입력"
+                  style={styles.input}
+                />
+              </div>
+
+              <div style={styles.formGroup}>
+                <label style={styles.label}>메모</label>
+                <textarea
+                  value={siteFormData.notes}
+                  onChange={(e) => setSiteFormData({ ...siteFormData, notes: e.target.value })}
+                  placeholder="메모 입력..."
+                  rows={3}
+                  style={styles.textarea}
+                />
+              </div>
+            </div>
+
+            <div style={styles.modalFooter}>
+              <button
+                onClick={() => setShowSiteModal(false)}
+                style={styles.cancelButton}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSaveSite}
+                style={styles.saveButton}
+              >
+                추가
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -544,12 +906,28 @@ const styles = {
   formGroup: {
     marginBottom: '15px',
   },
+  labelWithButton: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '5px',
+  },
   label: {
     display: 'block',
-    marginBottom: '5px',
     fontSize: '14px',
     fontWeight: 'bold',
     color: '#333',
+  },
+  addButton: {
+    padding: '6px 12px',
+    backgroundColor: '#4CAF50',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    transition: 'background-color 0.3s',
   },
   input: {
     width: '100%',
@@ -606,6 +984,118 @@ const styles = {
     borderRadius: '8px',
     fontSize: '18px',
     fontWeight: 'bold',
+  },
+  modal: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: '12px',
+    width: '90%',
+    maxWidth: '600px',
+    maxHeight: '90vh',
+    overflow: 'auto',
+  },
+  modalHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '20px',
+    borderBottom: '2px solid #f0f0f0',
+  },
+  modalTitle: {
+    fontSize: '20px',
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  closeButton: {
+    width: '32px',
+    height: '32px',
+    border: 'none',
+    backgroundColor: 'transparent',
+    fontSize: '24px',
+    cursor: 'pointer',
+    color: '#999',
+  },
+  modalBody: {
+    padding: '20px',
+  },
+  modalFooter: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '10px',
+    padding: '20px',
+    borderTop: '2px solid #f0f0f0',
+  },
+  cancelButton: {
+    padding: '10px 20px',
+    backgroundColor: '#f5f5f5',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '14px',
+    cursor: 'pointer',
+  },
+  saveButton: {
+    padding: '10px 20px',
+    backgroundColor: '#4CAF50',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+  },
+  keywordAddButton: {
+    padding: '10px 15px',
+    backgroundColor: '#2196F3',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '14px',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
+  keywordList: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '8px',
+    minHeight: '40px',
+    padding: '10px',
+    border: '2px dashed #ddd',
+    borderRadius: '8px',
+  },
+  keywordTag: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '6px 12px',
+    backgroundColor: '#e3f2fd',
+    color: '#1976d2',
+    borderRadius: '16px',
+    fontSize: '14px',
+  },
+  keywordRemoveButton: {
+    width: '18px',
+    height: '18px',
+    border: 'none',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    color: 'white',
+    borderRadius: '50%',
+    fontSize: '12px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0,
   },
 };
 
