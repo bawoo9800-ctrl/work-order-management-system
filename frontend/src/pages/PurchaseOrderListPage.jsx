@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import ImageGalleryViewer from '../components/ImageGalleryViewer';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 const PurchaseOrderListPage = () => {
   const navigate = useNavigate();
