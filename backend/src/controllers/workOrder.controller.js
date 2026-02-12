@@ -164,7 +164,7 @@ export const uploadWorkOrder = asyncHandler(async (req, res) => {
 export const getWorkOrders = asyncHandler(async (req, res) => {
   const {
     page = 1,
-    limit = 20,
+    limit = 1000, // 기본 1000개까지 조회
     clientId,
     status,
     startDate,
@@ -409,7 +409,7 @@ export const reclassifyWorkOrder = asyncHandler(async (req, res) => {
  * GET /api/v1/work-orders/trash
  */
 export const getTrashWorkOrders = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 20 } = req.query;
+  const { page = 1, limit = 1000 } = req.query; // 기본 1000개
 
   const result = await WorkOrderModel.getDeletedWorkOrders({
     page: parseInt(page),
