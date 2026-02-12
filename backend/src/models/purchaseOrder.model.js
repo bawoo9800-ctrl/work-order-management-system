@@ -237,7 +237,7 @@ export const createPurchaseOrder = async (purchaseOrderData) => {
  */
 export const updatePurchaseOrder = async (id, updateData) => {
   const allowedFields = [
-    'supplier_id', 'supplier_name', 'supplier_contact',
+    'supplier_id', 'supplier_name', 'supplier_contact', 'site_name',
     'order_date', 'delivery_date', 'order_amount', 'currency',
     'items', 'item_count',
     'status', 'priority',
