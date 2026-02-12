@@ -23,8 +23,8 @@ function PurchaseOrderUploadPage() {
   
   // 발주 정보
   const [vendorName, setVendorName] = useState('');
+  const [siteName, setSiteName] = useState('');
   const [orderDate, setOrderDate] = useState('');
-  const [orderAmount, setOrderAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [uploadedBy, setUploadedBy] = useState('');
   
@@ -116,16 +116,16 @@ function PurchaseOrderUploadPage() {
       });
       
       formData.append('vendorName', vendorName);
+      formData.append('siteName', siteName);
       formData.append('orderDate', orderDate);
-      formData.append('orderAmount', orderAmount);
       formData.append('memo', memo);
       formData.append('uploadedBy', uploadedBy.trim());
       
       console.log('📤 발주서 업로드 시작:', {
         fileCount: files.length,
         vendorName,
+        siteName,
         orderDate,
-        orderAmount,
         uploadedBy
       });
       
@@ -273,22 +273,22 @@ function PurchaseOrderUploadPage() {
         </div>
         
         <div style={styles.formGroup}>
-          <label style={styles.label}>발주 날짜 (선택)</label>
+          <label style={styles.label}>현장명 (선택)</label>
           <input
-            type="date"
-            value={orderDate}
-            onChange={(e) => setOrderDate(e.target.value)}
+            type="text"
+            value={siteName}
+            onChange={(e) => setSiteName(e.target.value)}
+            placeholder="현장명 입력"
             style={styles.input}
           />
         </div>
         
         <div style={styles.formGroup}>
-          <label style={styles.label}>발주 금액 (선택)</label>
+          <label style={styles.label}>발주일 (선택)</label>
           <input
-            type="number"
-            value={orderAmount}
-            onChange={(e) => setOrderAmount(e.target.value)}
-            placeholder="숫자만 입력"
+            type="date"
+            value={orderDate}
+            onChange={(e) => setOrderDate(e.target.value)}
             style={styles.input}
           />
         </div>
