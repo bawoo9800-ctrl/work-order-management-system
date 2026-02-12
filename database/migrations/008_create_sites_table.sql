@@ -44,7 +44,7 @@ SELECT
   po.site_name AS name,
   1 AS is_active
 FROM `purchase_orders` po
-INNER JOIN `clients` c ON c.name = po.supplier_name
+INNER JOIN `clients` c ON c.name COLLATE utf8mb4_unicode_ci = po.supplier_name COLLATE utf8mb4_unicode_ci
 WHERE po.site_name IS NOT NULL 
   AND po.site_name != ''
   AND po.supplier_name IS NOT NULL
@@ -53,7 +53,7 @@ ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP;
 
 -- purchase_orders의 site_id 업데이트
 UPDATE `purchase_orders` po
-INNER JOIN `clients` c ON c.name = po.supplier_name
+INNER JOIN `clients` c ON c.name COLLATE utf8mb4_unicode_ci = po.supplier_name COLLATE utf8mb4_unicode_ci
 INNER JOIN `sites` s ON s.client_id = c.id AND s.name = po.site_name
 SET po.site_id = s.id
 WHERE po.site_name IS NOT NULL AND po.site_name != '';
