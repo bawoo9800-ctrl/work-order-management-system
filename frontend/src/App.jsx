@@ -66,16 +66,15 @@ function AppContent() {
       {!isUploadPage && (
         <header className="app-header">
           <div className="container">
-            <h1 className="app-title">🏗️ 도어라이프 통합 관리 시스템</h1>
             <nav className="app-nav">
-              <Link to="/" className="nav-link">📋 작업지시서</Link>
-              <Link to="/upload" className="nav-link">📤 작업지시서 업로드</Link>
-              <Link to="/purchase-orders" className="nav-link">📦 발주서</Link>
-              <Link to="/clients" className="nav-link">🏢 거래처 관리</Link>
-              <Link to="/sites" className="nav-link">🏗️ 현장 관리</Link>
-              <Link to="/stats" className="nav-link">📊 통계</Link>
-              <Link to="/trash" className="nav-link">🗑️ 휴지통</Link>
-              <Link to="/admin" className="nav-link">⚙️ 시스템 관리</Link>
+              <Link to="/" className="nav-link">작업지시서</Link>
+              <Link to="/upload" className="nav-link">작업지시서 업로드</Link>
+              <Link to="/purchase-orders" className="nav-link">발주서</Link>
+              <Link to="/clients" className="nav-link">거래처</Link>
+              <Link to="/sites" className="nav-link">현장</Link>
+              <Link to="/stats" className="nav-link">통계</Link>
+              <Link to="/trash" className="nav-link">휴지통</Link>
+              <Link to="/admin" className="nav-link">관리</Link>
             </nav>
             <div className="health-status">
               {healthStatus === 'healthy' && (
