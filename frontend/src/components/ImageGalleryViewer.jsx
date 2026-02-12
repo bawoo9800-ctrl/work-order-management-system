@@ -743,11 +743,13 @@ function ImageGalleryViewer({
           background: #000;
           overflow: hidden;
           user-select: none;
+          aspect-ratio: 210 / 297; /* A4 세로 비율 */
+          max-width: calc(80vh * 210 / 297); /* 높이 기준으로 너비 제한 */
         }
         
         .gallery-image {
-          max-width: 100%;
-          max-height: 100%;
+          width: 100%;
+          height: 100%;
           object-fit: contain;
           transition: transform 0.1s ease-out;
           will-change: transform;

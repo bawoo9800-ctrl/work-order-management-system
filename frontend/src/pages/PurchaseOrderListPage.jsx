@@ -365,7 +365,7 @@ const styles = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
     gap: '20px',
   },
   card: {
@@ -379,7 +379,7 @@ const styles = {
   imageContainer: {
     position: 'relative',
     width: '100%',
-    paddingBottom: '75%',
+    paddingBottom: '141.4%', // A4 세로 비율 (210:297 = 1:1.414)
     backgroundColor: '#f5f5f5',
     overflow: 'hidden',
   },
