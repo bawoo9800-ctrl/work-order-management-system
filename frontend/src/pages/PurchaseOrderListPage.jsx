@@ -22,12 +22,15 @@ const PurchaseOrderListPage = () => {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // 필터
-  const [filters, setFilters] = useState({
-    status: '',
-    startDate: '',
-    endDate: '',
-  });
+  // 한국 시간대로 오늘 날짜
+  const getKoreanDate = () => {
+    const now = new Date();
+    const koreaTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+    return koreaTime.toISOString().split('T')[0];
+  };
+  
+  const [selectedDate, setSelectedDate] = useState(getKoreanDate());
+  const today = getKoreanDate();
   
   // 이미지 갤러리
   const [zoomedImage, setZoomedImage] = useState(null);
@@ -35,7 +38,7 @@ const PurchaseOrderListPage = () => {
   
   // 초기 데이터 로딩
   useEffect(() => {
-    fetchPurchaseOrders();
+    fetchPurchaseOrdersByDate(selectedDate);
     fetchClients();
   }, []);
   
@@ -48,18 +51,31 @@ const PurchaseOrderListPage = () => {
     }
   }, [location.state]);
   
-  // 발주서 조회
-  const fetchPurchaseOrders = async (params = {}) => {
+  // 발주서 조회 (날짜 또는 전체)
+  const fetchPurchaseOrdersByDate = async (date) => {
     try {
       setLoading(true);
+      const params = date ? { startDate: date, endDate: date } : {};
       const response = await axios.get(`${API_BASE_URL}/api/v1/purchase-orders`, { params });
       const orders = response.data?.data || [];
       setPurchaseOrders(orders);
-      console.log('📦 발주서:', orders.length);
+      console.log(date ? `📦 ${date} 발주서:` : '📦 전체 발주서:', orders.length);
     } catch (error) {
       console.error('❌ 발주서 로드 실패:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // 검색 변경 핸들러
+  const handleSearchChange = (value) => {
+    setSearchQuery(value);
+    
+    // 검색어가 있으면 전체 내역 조회, 없으면 당일
+    if (value.trim()) {
+      fetchPurchaseOrdersByDate(null);
+    } else {
+      fetchPurchaseOrdersByDate(selectedDate);
     }
   };
   
@@ -73,15 +89,16 @@ const PurchaseOrderListPage = () => {
     }
   };
   
-  // 검색 필터링
+  // 검색 필터링 (발주처, 현장명, 메모)
   const filteredOrders = purchaseOrders.filter(order => {
-    const matchSearch = !searchQuery || 
-      order.supplier_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.memo?.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!searchQuery) return true;
     
-    const matchStatus = !filters.status || order.status === filters.status;
-    
-    return matchSearch && matchStatus;
+    const query = searchQuery.toLowerCase();
+    return (
+      order.supplier_name?.toLowerCase().includes(query) ||
+      order.site_name?.toLowerCase().includes(query) ||
+      order.memo?.toLowerCase().includes(query)
+    );
   });
   
   // 이미지 클릭 핸들러
@@ -111,7 +128,7 @@ const PurchaseOrderListPage = () => {
   const handleUpdatePurchaseOrder = async (id, updateData) => {
     try {
       await axios.put(`${API_BASE_URL}/api/v1/purchase-orders/${id}`, updateData);
-      fetchPurchaseOrders();
+      fetchPurchaseOrdersByDate(searchQuery ? null : selectedDate);
     } catch (error) {
       console.error('발주서 수정 실패:', error);
       alert('발주서 수정에 실패했습니다.');
@@ -124,7 +141,7 @@ const PurchaseOrderListPage = () => {
     
     try {
       await axios.delete(`${API_BASE_URL}/api/v1/purchase-orders/${id}`);
-      fetchPurchaseOrders();
+      fetchPurchaseOrdersByDate(searchQuery ? null : selectedDate);
       setZoomedImage(null);
       setZoomedOrder(null);
     } catch (error) {
@@ -170,28 +187,44 @@ const PurchaseOrderListPage = () => {
         </button>
       </div>
       
-      {/* 검색 및 필터 */}
+      {/* 검색 및 날짜 */}
       <div style={styles.filterSection}>
         <input
-          type="text"
-          placeholder="🔍 발주처 검색..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={styles.searchInput}
+          type="date"
+          value={selectedDate}
+          max={today}
+          onChange={(e) => {
+            setSelectedDate(e.target.value);
+            if (!searchQuery) {
+              fetchPurchaseOrdersByDate(e.target.value);
+            }
+          }}
+          style={styles.dateInput}
         />
         
-        <select
-          value={filters.status}
-          onChange={(e) => setFilters({...filters, status: e.target.value})}
-          style={styles.select}
+        <button
+          onClick={() => {
+            setSelectedDate(today);
+            if (!searchQuery) {
+              fetchPurchaseOrdersByDate(today);
+            }
+          }}
+          style={{
+            ...styles.todayButton,
+            backgroundColor: selectedDate === today ? '#4CAF50' : '#f0f0f0',
+            color: selectedDate === today ? 'white' : '#333'
+          }}
         >
-          <option value="">전체 상태</option>
-          <option value="pending">대기</option>
-          <option value="confirmed">확인</option>
-          <option value="shipped">배송중</option>
-          <option value="delivered">완료</option>
-          <option value="cancelled">취소</option>
-        </select>
+          오늘
+        </button>
+        
+        <input
+          type="text"
+          placeholder="🔍 발주처, 현장명, 메모 검색..."
+          value={searchQuery}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          style={styles.searchInput}
+        />
         
         <div style={styles.stats}>
           총 <strong>{filteredOrders.length}</strong>건
@@ -341,20 +374,30 @@ const styles = {
     alignItems: 'center',
     flexWrap: 'wrap',
   },
+  dateInput: {
+    padding: '10px 15px',
+    border: '2px solid #ddd',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontFamily: 'inherit',
+    cursor: 'pointer',
+  },
+  todayButton: {
+    padding: '10px 20px',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
   searchInput: {
     flex: 1,
-    minWidth: '200px',
+    minWidth: '250px',
     padding: '10px 15px',
     border: '2px solid #ddd',
     borderRadius: '8px',
     fontSize: '14px',
-  },
-  select: {
-    padding: '10px 15px',
-    border: '2px solid #ddd',
-    borderRadius: '8px',
-    fontSize: '14px',
-    cursor: 'pointer',
   },
   stats: {
     padding: '10px 20px',
