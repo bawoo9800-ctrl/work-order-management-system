@@ -245,10 +245,21 @@ function PurchaseOrderUploadPage() {
                       setVendorName(supplier.name);
                       setShowAutocomplete(false);
                     }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                     style={styles.autocompleteItem}
                   >
-                    {supplier.name}
-                    {supplier.contact_person && ` (${supplier.contact_person})`}
+                    <div style={{ fontWeight: 'bold' }}>{supplier.name}</div>
+                    {supplier.contact_person && (
+                      <div style={{ fontSize: '12px', color: '#666' }}>
+                        담당자: {supplier.contact_person}
+                      </div>
+                    )}
+                    {supplier.phone && (
+                      <div style={{ fontSize: '12px', color: '#666' }}>
+                        연락처: {supplier.phone}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -467,6 +478,10 @@ const styles = {
     padding: '10px',
     cursor: 'pointer',
     borderBottom: '1px solid #eee',
+    transition: 'background-color 0.2s',
+  },
+  autocompleteItemHover: {
+    backgroundColor: '#f5f5f5',
   },
   error: {
     padding: '15px',
