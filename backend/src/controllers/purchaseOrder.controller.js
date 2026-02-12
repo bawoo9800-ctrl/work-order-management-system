@@ -20,7 +20,7 @@ import { asyncHandler } from '../middleware/error.middleware.js';
 /**
  * 발주서 업로드 및 처리 (다중 이미지 지원)
  * POST /api/v1/purchase-orders/upload
- * Body: supplierName (선택), orderDate (선택), uploadedBy (필수)
+ * Body: vendorName (선택), siteName (선택), orderDate (선택), memo (선택), uploadedBy (필수)
  * Files: images[] (다중 이미지)
  */
 export const uploadPurchaseOrder = asyncHandler(async (req, res) => {
@@ -34,7 +34,7 @@ export const uploadPurchaseOrder = asyncHandler(async (req, res) => {
   }
   
   // 수동 입력 필드
-  const { supplierName, orderDate, orderAmount, memo, uploadedBy } = req.body;
+  const { vendorName, siteName, orderDate, memo, uploadedBy } = req.body;
   
   // 필수 필드 검증
   if (!uploadedBy || !uploadedBy.trim()) {
@@ -43,7 +43,8 @@ export const uploadPurchaseOrder = asyncHandler(async (req, res) => {
 
   logger.info(`발주서 업로드 시작: ${files.length}장`, {
     fileCount: files.length,
-    supplierName: supplierName || '(없음)',
+    vendorName: vendorName || '(없음)',
+    siteName: siteName || '(없음)',
     orderDate: orderDate || '(없음)',
     uploadedBy: uploadedBy.trim(),
   });
@@ -84,10 +85,9 @@ export const uploadPurchaseOrder = asyncHandler(async (req, res) => {
       images: imagesJson,
       image_count: imageResults.length,
       supplier_id: null,
-      supplier_name: supplierName?.trim() || null,
+      supplier_name: vendorName?.trim() || null,
+      site_name: siteName?.trim() || null,
       order_date: orderDate || null,
-      order_amount: orderAmount ? parseFloat(orderAmount) : null,
-      currency: 'KRW',
       status: 'pending',
       priority: 'normal',
       memo: memo?.trim() || null,
