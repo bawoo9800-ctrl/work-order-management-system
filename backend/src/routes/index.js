@@ -10,6 +10,8 @@
 import express from 'express';
 import clientRoutes from './client.routes.js';
 import workOrderRoutes from './workOrder.routes.js';
+import purchaseOrderRoutes from './purchaseOrder.routes.js';
+import supplierRoutes from './supplier.routes.js';
 import userRoutes from './user.routes.js';
 import statsRoutes from './stats.routes.js';
 import notificationRoutes from './notification.routes.js';
@@ -29,6 +31,8 @@ router.get('/health', asyncHandler(healthController.healthCheck));
  */
 router.use('/api/v1/clients', clientRoutes);
 router.use('/api/v1/work-orders', workOrderRoutes);
+router.use('/api/v1/purchase-orders', purchaseOrderRoutes);
+router.use('/api/v1/suppliers', supplierRoutes);
 router.use('/api/v1/users', userRoutes);
 router.use('/api/v1/stats', statsRoutes);
 router.use('/api/v1/notifications', notificationRoutes);
@@ -71,6 +75,23 @@ router.get('/api/v1', (req, res) => {
           recent: 'GET /api/v1/work-orders/recent',
           stats: 'GET /api/v1/work-orders/stats/summary',
           reclassify: 'POST /api/v1/work-orders/:id/reclassify',
+        },
+        purchaseOrders: {
+          upload: 'POST /api/v1/purchase-orders/upload',
+          list: 'GET /api/v1/purchase-orders',
+          get: 'GET /api/v1/purchase-orders/:id',
+          update: 'PUT /api/v1/purchase-orders/:id',
+          delete: 'DELETE /api/v1/purchase-orders/:id',
+          stats: 'GET /api/v1/purchase-orders/stats',
+          bySupplier: 'GET /api/v1/purchase-orders/stats/by-supplier',
+        },
+        suppliers: {
+          list: 'GET /api/v1/suppliers',
+          get: 'GET /api/v1/suppliers/:id',
+          create: 'POST /api/v1/suppliers',
+          update: 'PUT /api/v1/suppliers/:id',
+          delete: 'DELETE /api/v1/suppliers/:id',
+          search: 'GET /api/v1/suppliers/search',
         },
         notifications: {
           register: 'POST /api/v1/notifications/register',
