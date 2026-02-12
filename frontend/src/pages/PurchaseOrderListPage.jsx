@@ -138,7 +138,29 @@ const PurchaseOrderListPage = () => {
   // 발주서 수정
   const handleUpdatePurchaseOrder = async (id, updateData) => {
     try {
-      await axios.put(`${API_BASE_URL}/api/v1/purchase-orders/${id}`, updateData);
+      const response = await axios.put(`${API_BASE_URL}/api/v1/purchase-orders/${id}`, updateData);
+      
+      // 수정 성공 메시지
+      alert('✅ 발주서가 수정되었습니다.');
+      
+      // 수정된 발주서의 날짜 확인
+      const updatedOrder = response.data?.data;
+      const updatedDate = updatedOrder?.order_date;
+      
+      // 날짜가 변경되었는지 확인
+      if (updatedDate) {
+        const orderDateOnly = updatedDate.split('T')[0]; // YYYY-MM-DD만 추출
+        
+        // 수정된 날짜로 필터 변경
+        if (orderDateOnly !== selectedDate) {
+          console.log(`📅 발주일 변경됨: ${selectedDate} → ${orderDateOnly}`);
+          setSelectedDate(orderDateOnly);
+          fetchPurchaseOrdersByDate(orderDateOnly);
+          return;
+        }
+      }
+      
+      // 날짜 변경이 없으면 현재 필터로 재조회
       fetchPurchaseOrdersByDate(searchQuery ? null : selectedDate);
     } catch (error) {
       console.error('발주서 수정 실패:', error);
