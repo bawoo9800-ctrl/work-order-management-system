@@ -57,7 +57,7 @@ const PurchaseOrderListPage = () => {
   const fetchClients = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/v1/clients`);
-      setClients(response.data?.data || []);
+      setClients(response.data?.data?.clients || []);
     } catch (error) {
       console.error('❌ 거래처 로드 실패:', error);
     }
