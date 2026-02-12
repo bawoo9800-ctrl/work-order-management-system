@@ -366,7 +366,7 @@ export const getPurchaseOrderCountByClient = async (clientName) => {
   const sql = `
     SELECT COUNT(*) as count
     FROM purchase_orders
-    WHERE supplier_name = ? AND status != 'cancelled'
+    WHERE supplier_name COLLATE utf8mb4_unicode_ci = ? AND status != 'cancelled'
   `;
   const result = await queryOne(sql, [clientName]);
   return result?.count || 0;
