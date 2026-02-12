@@ -7,6 +7,7 @@ import HomePage from './pages/HomePage';
 import UploadPage from './pages/UploadPage';
 import StatsPage from './pages/StatsPage';
 import ClientsPage from './pages/ClientsPage';
+import SitesPage from './pages/SitesPage';
 import AdminPage from './pages/AdminPage';
 import TrashPage from './pages/TrashPage';
 import PurchaseOrderListPage from './pages/PurchaseOrderListPage';
@@ -71,6 +72,7 @@ function AppContent() {
               <Link to="/upload" className="nav-link">업로드</Link>
               <Link to="/purchase-orders" className="nav-link">발주서</Link>
               <Link to="/clients" className="nav-link">거래처</Link>
+              <Link to="/sites" className="nav-link">현장</Link>
               <Link to="/stats" className="nav-link">통계</Link>
               <Link to="/trash" className="nav-link">휴지통</Link>
               <Link to="/admin" className="nav-link">관리</Link>
@@ -100,6 +102,7 @@ function AppContent() {
               <Route path="/purchase-orders" element={<PurchaseOrderListPage />} />
               <Route path="/purchase-orders/upload" element={<PurchaseOrderUploadPage />} />
               <Route path="/clients" element={<ClientsPage />} />
+              <Route path="/sites" element={<SitesPage />} />
               <Route path="/stats" element={<StatsPage />} />
               <Route path="/trash" element={<TrashPage />} />
               <Route path="/admin" element={<AdminPage />} />
