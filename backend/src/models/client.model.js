@@ -351,7 +351,7 @@ export const getWorkOrderCountByClient = async (clientId) => {
   const sql = `
     SELECT COUNT(*) as count
     FROM work_orders
-    WHERE client_id = ? AND deleted_at IS NULL
+    WHERE client_id = ?
   `;
   const result = await queryOne(sql, [clientId]);
   return result?.count || 0;
