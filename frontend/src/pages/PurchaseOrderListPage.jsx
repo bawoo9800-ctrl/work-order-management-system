@@ -500,7 +500,7 @@ const styles = {
   },
 };
 
-// 미디어 쿼리를 위한 CSS 추가
+// 미디어 쿼리를 위한 CSS 추가 (작업지시서와 동일)
 const responsiveStyles = `
   /* 대형 데스크톱 (1920px+) */
   @media (min-width: 1920px) {
@@ -531,11 +531,17 @@ const responsiveStyles = `
     }
   }
   
-  /* 모바일 (767px 이하) */
-  @media (max-width: 767px) {
+  /* 모바일 (600-767px) */
+  @media (min-width: 600px) and (max-width: 767px) {
+    .purchase-order-grid {
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+    }
+  }
+  
+  /* 작은 모바일 (599px 이하) */
+  @media (max-width: 599px) {
     .purchase-order-grid {
       grid-template-columns: 1fr !important;
-      gap: 16px !important;
     }
   }
   
