@@ -9,6 +9,8 @@ import StatsPage from './pages/StatsPage';
 import ClientsPage from './pages/ClientsPage';
 import AdminPage from './pages/AdminPage';
 import TrashPage from './pages/TrashPage';
+import PurchaseOrderListPage from './pages/PurchaseOrderListPage';
+import PurchaseOrderUploadPage from './pages/PurchaseOrderUploadPage';
 
 // Components
 import NotificationHandler from './components/NotificationHandler';
@@ -67,6 +69,7 @@ function AppContent() {
             <nav className="app-nav">
               <Link to="/" className="nav-link">홈</Link>
               <Link to="/upload" className="nav-link">업로드</Link>
+              <Link to="/purchase-orders" className="nav-link">발주서</Link>
               <Link to="/clients" className="nav-link">거래처</Link>
               <Link to="/stats" className="nav-link">통계</Link>
               <Link to="/trash" className="nav-link">휴지통</Link>
@@ -94,6 +97,8 @@ function AppContent() {
           <div className={isUploadPage ? "" : "container"}>
             <Routes>
               <Route path="/upload" element={<UploadPage />} />
+              <Route path="/purchase-orders" element={<PurchaseOrderListPage />} />
+              <Route path="/purchase-orders/upload" element={<PurchaseOrderUploadPage />} />
               <Route path="/clients" element={<ClientsPage />} />
               <Route path="/stats" element={<StatsPage />} />
               <Route path="/trash" element={<TrashPage />} />
