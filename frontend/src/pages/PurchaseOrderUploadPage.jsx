@@ -10,6 +10,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { siteAPI } from '../services/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -23,6 +24,7 @@ function PurchaseOrderUploadPage() {
   
   // 발주 정보
   const [vendorName, setVendorName] = useState('');
+  const [selectedClientId, setSelectedClientId] = useState(null);
   const [siteName, setSiteName] = useState('');
   const [orderDate, setOrderDate] = useState('');
   const [memo, setMemo] = useState('');
@@ -32,6 +34,11 @@ function PurchaseOrderUploadPage() {
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [filteredClients, setFilteredClients] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  
+  // 현장 자동완성
+  const [showSiteAutocomplete, setShowSiteAutocomplete] = useState(false);
+  const [filteredSites, setFilteredSites] = useState([]);
+  const [isSearchingSite, setIsSearchingSite] = useState(false);
   
   useEffect(() => {
     // 로컬스토리지에서 업로더 이름 불러오기
@@ -44,6 +51,7 @@ function PurchaseOrderUploadPage() {
   // 발주처(거래처) 검색
   const handleVendorSearch = async (value) => {
     setVendorName(value);
+    setSelectedClientId(null); // 거래처가 변경되면 clientId 초기화
     
     if (value.trim().length > 0) {
       try {
@@ -67,6 +75,57 @@ function PurchaseOrderUploadPage() {
     } else {
       setFilteredClients([]);
       setShowAutocomplete(false);
+    }
+  };
+  
+  // 거래처 선택 핸들러
+  const handleSelectClient = (client) => {
+    setVendorName(client.name);
+    setSelectedClientId(client.id);
+    setShowAutocomplete(false);
+    
+    // 거래처 선택 시 해당 거래처의 현장 목록 미리 불러오기
+    if (client.id) {
+      fetchClientSites(client.id);
+    }
+  };
+  
+  // 현장 검색
+  const handleSiteSearch = async (value) => {
+    setSiteName(value);
+    
+    if (value.trim().length > 0) {
+      try {
+        setIsSearchingSite(true);
+        const response = await siteAPI.search(value, selectedClientId);
+        
+        console.log('🏗️ 현장 검색 결과:', response);
+        
+        const results = response?.data?.sites || [];
+        setFilteredSites(results);
+        setShowSiteAutocomplete(results.length > 0);
+      } catch (error) {
+        console.error('❌ 현장 검색 실패:', error);
+        setFilteredSites([]);
+        setShowSiteAutocomplete(false);
+      } finally {
+        setIsSearchingSite(false);
+      }
+    } else {
+      setFilteredSites([]);
+      setShowSiteAutocomplete(false);
+    }
+  };
+  
+  // 거래처별 현장 목록 불러오기
+  const fetchClientSites = async (clientId) => {
+    try {
+      const response = await siteAPI.list(clientId);
+      const sites = response?.data?.sites || [];
+      setFilteredSites(sites);
+      console.log(`📍 거래처 ${clientId}의 현장 목록:`, sites);
+    } catch (error) {
+      console.error('❌ 현장 목록 로드 실패:', error);
     }
   };
   
@@ -251,10 +310,7 @@ function PurchaseOrderUploadPage() {
                 {filteredClients.map(client => (
                   <div
                     key={client.id}
-                    onClick={() => {
-                      setVendorName(client.name);
-                      setShowAutocomplete(false);
-                    }}
+                    onClick={() => handleSelectClient(client)}
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                     style={styles.autocompleteItem}
@@ -273,14 +329,60 @@ function PurchaseOrderUploadPage() {
         </div>
         
         <div style={styles.formGroup}>
-          <label style={styles.label}>현장명 (선택)</label>
-          <input
-            type="text"
-            value={siteName}
-            onChange={(e) => setSiteName(e.target.value)}
-            placeholder="현장명 입력"
-            style={styles.input}
-          />
+          <label style={styles.label}>
+            현장명 (선택) {isSearchingSite && <span style={{ color: '#2196F3', fontSize: '12px' }}>검색 중...</span>}
+          </label>
+          <div style={{ position: 'relative' }}>
+            <input
+              type="text"
+              value={siteName}
+              onChange={(e) => handleSiteSearch(e.target.value)}
+              onFocus={() => {
+                if (selectedClientId) {
+                  // 거래처가 선택된 경우 해당 거래처의 현장 목록 표시
+                  fetchClientSites(selectedClientId);
+                  if (filteredSites.length > 0) {
+                    setShowSiteAutocomplete(true);
+                  }
+                } else if (siteName.trim()) {
+                  // 거래처 미선택 시 전체 현장 검색
+                  handleSiteSearch(siteName);
+                }
+              }}
+              onBlur={() => setTimeout(() => setShowSiteAutocomplete(false), 300)}
+              placeholder={selectedClientId ? "현장명 입력 (거래처 현장 검색)" : "현장명 입력 (먼저 거래처 선택 권장)"}
+              style={styles.input}
+            />
+            
+            {showSiteAutocomplete && filteredSites.length > 0 && (
+              <div style={styles.autocomplete}>
+                {filteredSites.map(site => (
+                  <div
+                    key={site.id}
+                    onClick={() => {
+                      setSiteName(site.name);
+                      setShowSiteAutocomplete(false);
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                    style={styles.autocompleteItem}
+                  >
+                    <div style={{ fontWeight: 'bold' }}>{site.name}</div>
+                    {site.address && (
+                      <div style={{ fontSize: '12px', color: '#666' }}>
+                        주소: {site.address}
+                      </div>
+                    )}
+                    {site.manager && (
+                      <div style={{ fontSize: '11px', color: '#999' }}>
+                        담당자: {site.manager}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         
         <div style={styles.formGroup}>

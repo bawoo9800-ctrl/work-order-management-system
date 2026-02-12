@@ -200,6 +200,50 @@ export const clientAPI = {
 };
 
 /**
+ * 현장 API
+ */
+export const siteAPI = {
+  // 목록 조회 (거래처별)
+  list: async (clientId = null) => {
+    const params = clientId ? { clientId } : {};
+    const response = await apiClient.get('/api/v1/sites', { params });
+    return response.data;
+  },
+
+  // 검색 (자동완성용)
+  search: async (query, clientId = null) => {
+    const params = { q: query };
+    if (clientId) params.clientId = clientId;
+    const response = await apiClient.get('/api/v1/sites/search', { params });
+    return response.data;
+  },
+
+  // 상세 조회
+  getById: async (id) => {
+    const response = await apiClient.get(`/api/v1/sites/${id}`);
+    return response.data;
+  },
+
+  // 생성
+  create: async (siteData) => {
+    const response = await apiClient.post('/api/v1/sites', siteData);
+    return response.data;
+  },
+
+  // 수정
+  update: async (id, siteData) => {
+    const response = await apiClient.put(`/api/v1/sites/${id}`, siteData);
+    return response.data;
+  },
+
+  // 삭제
+  delete: async (id) => {
+    const response = await apiClient.delete(`/api/v1/sites/${id}`);
+    return response.data;
+  },
+};
+
+/**
  * 헬스 체크
  */
 export const healthAPI = {
