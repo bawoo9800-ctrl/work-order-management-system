@@ -257,6 +257,39 @@ function UploadPage() {
 
       {/* 메인 컨텐츠 */}
       <div className="upload-content">
+        {/* 미리보기 영역 - 다중 이미지 */}
+        {files.length > 0 ? (
+          <div className="preview-section">
+            <div className="preview-header">
+              <span className="preview-count">📷 {files.length}장 선택됨</span>
+              <span className="preview-size">
+                {(files.reduce((sum, f) => sum + f.file.size, 0) / 1024 / 1024).toFixed(2)}MB
+              </span>
+            </div>
+            <div className="preview-grid">
+              {files.map((fileObj) => (
+                <div key={fileObj.id} className="preview-item">
+                  <img src={fileObj.preview} alt="미리보기" className="preview-thumb" />
+                  <button
+                    className="btn-remove"
+                    onClick={() => handleRemoveFile(fileObj.id)}
+                    disabled={uploading}
+                  >
+                    ✕
+                  </button>
+                  <div className="preview-name">{fileObj.file.name}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="empty-preview">
+            <div className="empty-icon">📷</div>
+            <p className="empty-text">촬영하거나 이미지를 선택하세요</p>
+            <p className="empty-hint">여러 장을 한 번에 선택할 수 있습니다</p>
+          </div>
+        )}
+
         {/* 전송자 선택 */}
         <div className="form-section">
           <label className="form-label">
@@ -299,39 +332,6 @@ function UploadPage() {
             {scanning ? '🔄 문서 스캔 중...' : '📸 여러 장을 선택할 수 있습니다'}
           </p>
         </div>
-
-        {/* 미리보기 영역 - 다중 이미지 */}
-        {files.length > 0 ? (
-          <div className="preview-section">
-            <div className="preview-header">
-              <span className="preview-count">📷 {files.length}장 선택됨</span>
-              <span className="preview-size">
-                {(files.reduce((sum, f) => sum + f.file.size, 0) / 1024 / 1024).toFixed(2)}MB
-              </span>
-            </div>
-            <div className="preview-grid">
-              {files.map((fileObj) => (
-                <div key={fileObj.id} className="preview-item">
-                  <img src={fileObj.preview} alt="미리보기" className="preview-thumb" />
-                  <button
-                    className="btn-remove"
-                    onClick={() => handleRemoveFile(fileObj.id)}
-                    disabled={uploading}
-                  >
-                    ✕
-                  </button>
-                  <div className="preview-name">{fileObj.file.name}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="empty-preview">
-            <div className="empty-icon">📷</div>
-            <p className="empty-text">촬영하거나 이미지를 선택하세요</p>
-            <p className="empty-hint">여러 장을 한 번에 선택할 수 있습니다</p>
-          </div>
-        )}
 
         {/* 오류 메시지 */}
         {error && (
