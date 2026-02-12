@@ -31,6 +31,12 @@ function SitesPage() {
     phone: '',
     notes: '',
   });
+  
+  // 모달 내 거래처 자동완성
+  const [clientSearchQuery, setClientSearchQuery] = useState('');
+  const [clientSearchResults, setClientSearchResults] = useState([]);
+  const [showClientAutocomplete, setShowClientAutocomplete] = useState(false);
+  const [isSearchingClient, setIsSearchingClient] = useState(false);
 
   useEffect(() => {
     fetchClients();
@@ -85,6 +91,8 @@ function SitesPage() {
   const handleAddSite = () => {
     setModalMode('create');
     setCurrentSite(null);
+    setClientSearchQuery('');
+    setClientSearchResults([]);
     setFormData({
       client_id: selectedClientId || '',
       name: '',
@@ -93,6 +101,15 @@ function SitesPage() {
       phone: '',
       notes: '',
     });
+    
+    // 필터에서 거래처가 선택된 경우 자동으로 거래처명 표시
+    if (selectedClientId) {
+      const client = clients.find(c => c.id === parseInt(selectedClientId));
+      if (client) {
+        setClientSearchQuery(client.name);
+      }
+    }
+    
     setShowModal(true);
   };
 
@@ -100,6 +117,12 @@ function SitesPage() {
   const handleEditSite = (site) => {
     setModalMode('edit');
     setCurrentSite(site);
+    
+    // 거래처명 찾아서 표시
+    const client = clients.find(c => c.id === site.client_id);
+    setClientSearchQuery(client ? client.name : '');
+    setClientSearchResults([]);
+    
     setFormData({
       client_id: site.client_id || '',
       name: site.name || '',
@@ -110,10 +133,47 @@ function SitesPage() {
     });
     setShowModal(true);
   };
+  
+  // 거래처 검색 (모달 내)
+  const handleClientSearch = async (value) => {
+    setClientSearchQuery(value);
+    setFormData({ ...formData, client_id: '' }); // 입력 중에는 ID 초기화
+    
+    if (value.trim().length > 0) {
+      try {
+        setIsSearchingClient(true);
+        const response = await clientAPI.search(value);
+        const results = response?.data?.clients || [];
+        setClientSearchResults(results);
+        setShowClientAutocomplete(results.length > 0);
+      } catch (error) {
+        console.error('❌ 거래처 검색 실패:', error);
+        setClientSearchResults([]);
+        setShowClientAutocomplete(false);
+      } finally {
+        setIsSearchingClient(false);
+      }
+    } else {
+      setClientSearchResults([]);
+      setShowClientAutocomplete(false);
+    }
+  };
+  
+  // 거래처 선택 (모달 내)
+  const handleSelectClient = (client) => {
+    setClientSearchQuery(client.name);
+    setFormData({ ...formData, client_id: client.id });
+    setShowClientAutocomplete(false);
+  };
 
   // 현장 저장
   const handleSaveSite = async () => {
     try {
+      if (!formData.client_id) {
+        alert('거래처를 선택해주세요.');
+        return;
+      }
+      
       if (!formData.name.trim()) {
         alert('현장명을 입력해주세요.');
         return;
@@ -266,20 +326,57 @@ function SitesPage() {
 
             <div style={styles.modalBody}>
               <div style={styles.formGroup}>
-                <label style={styles.label}>거래처 *</label>
-                <select
-                  value={formData.client_id}
-                  onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
-                  style={styles.input}
-                  required
-                >
-                  <option value="">거래처 선택</option>
-                  {clients.map(client => (
-                    <option key={client.id} value={client.id}>
-                      {client.name}
-                    </option>
-                  ))}
-                </select>
+                <label style={styles.label}>
+                  거래처 * {isSearchingClient && <span style={{ color: '#2196F3', fontSize: '12px' }}>검색 중...</span>}
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    value={clientSearchQuery}
+                    onChange={(e) => handleClientSearch(e.target.value)}
+                    onFocus={() => {
+                      if (clientSearchQuery.trim()) {
+                        handleClientSearch(clientSearchQuery);
+                      }
+                    }}
+                    onBlur={() => setTimeout(() => setShowClientAutocomplete(false), 300)}
+                    placeholder="거래처명 입력하여 검색..."
+                    style={styles.input}
+                    required
+                  />
+                  
+                  {showClientAutocomplete && clientSearchResults.length > 0 && (
+                    <div style={styles.autocomplete}>
+                      {clientSearchResults.map(client => (
+                        <div
+                          key={client.id}
+                          onClick={() => handleSelectClient(client)}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                          style={styles.autocompleteItem}
+                        >
+                          <div style={{ fontWeight: 'bold' }}>{client.name}</div>
+                          {client.code && (
+                            <div style={{ fontSize: '12px', color: '#666' }}>
+                              거래처코드: {client.code}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {formData.client_id && (
+                    <div style={{ 
+                      marginTop: '5px', 
+                      fontSize: '12px', 
+                      color: '#4CAF50',
+                      fontWeight: 'bold'
+                    }}>
+                      ✓ 거래처 선택됨: {clientSearchQuery}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div style={styles.formGroup}>
@@ -535,6 +632,26 @@ const styles = {
     fontSize: '14px',
     boxSizing: 'border-box',
     resize: 'vertical',
+  },
+  autocomplete: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    border: '2px solid #ddd',
+    borderTop: 'none',
+    borderRadius: '0 0 8px 8px',
+    maxHeight: '200px',
+    overflowY: 'auto',
+    zIndex: 10,
+    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+  },
+  autocompleteItem: {
+    padding: '10px',
+    cursor: 'pointer',
+    borderBottom: '1px solid #eee',
+    transition: 'background-color 0.2s',
   },
   modalFooter: {
     display: 'flex',
