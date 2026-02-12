@@ -23,8 +23,7 @@ CREATE TABLE IF NOT EXISTS `sites` (
   PRIMARY KEY (`id`),
   KEY `idx_client_id` (`client_id`),
   KEY `idx_name` (`name`),
-  KEY `idx_is_active` (`is_active`),
-  CONSTRAINT `fk_sites_client` FOREIGN KEY (`client_id`) REFERENCES `clients` (`id`) ON DELETE CASCADE
+  KEY `idx_is_active` (`is_active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='현장 마스터';
 
 -- =====================================================
