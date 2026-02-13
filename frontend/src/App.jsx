@@ -94,11 +94,15 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<HomePage />} />
           </Routes>
+        ) : location.pathname === '/purchase-orders' ? (
+          // 발주서 페이지는 container 없이 전체 너비 사용
+          <Routes>
+            <Route path="/purchase-orders" element={<PurchaseOrderListPage />} />
+          </Routes>
         ) : (
           <div className={isUploadPage ? "" : "container"}>
             <Routes>
               <Route path="/upload" element={<UploadPage />} />
-              <Route path="/purchase-orders" element={<PurchaseOrderListPage />} />
               <Route path="/purchase-orders/upload" element={<PurchaseOrderUploadPage />} />
               <Route path="/clients" element={<ClientsPage />} />
               <Route path="/sites" element={<SitesPage />} />
