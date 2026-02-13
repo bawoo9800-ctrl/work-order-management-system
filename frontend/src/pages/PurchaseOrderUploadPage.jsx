@@ -21,6 +21,7 @@ function PurchaseOrderUploadPage() {
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
   
   // 발주 정보
   const [vendorName, setVendorName] = useState('');
@@ -296,6 +297,43 @@ function PurchaseOrderUploadPage() {
     setError(null);
   };
   
+  // Drag & Drop 핸들러
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+  
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+  
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    
+    if (droppedFiles.length === 0) return;
+    
+    // 이미지 파일만 필터링
+    const imageFiles = droppedFiles.filter(file => 
+      file.type.startsWith('image/')
+    );
+    
+    if (imageFiles.length !== droppedFiles.length) {
+      alert('이미지 파일만 업로드 가능합니다.');
+    }
+    
+    if (imageFiles.length > 0) {
+      setFiles(prev => [...prev, ...imageFiles]);
+      setError(null);
+    }
+  };
+  
   // 개별 파일 삭제
   const removeFile = (index) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
@@ -394,13 +432,27 @@ function PurchaseOrderUploadPage() {
           style={styles.hiddenInput}
         />
         
-        <button
+        {/* Drag & Drop 영역 */}
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          style={styles.selectButton}
-          disabled={uploading}
+          style={{
+            ...styles.dropZone,
+            ...(isDragging ? styles.dropZoneActive : {})
+          }}
         >
-          📁 파일 선택
-        </button>
+          <div style={styles.dropZoneContent}>
+            <div style={styles.dropZoneIcon}>📁</div>
+            <div style={styles.dropZoneText}>
+              파일을 드래그하거나 클릭하여 선택하세요
+            </div>
+            <div style={styles.dropZoneHint}>
+              (여러 이미지 선택 가능)
+            </div>
+          </div>
+        </div>
         
         {/* 선택된 이미지 미리보기 */}
         {files.length > 0 && (
@@ -857,6 +909,41 @@ const styles = {
   },
   hiddenInput: {
     display: 'none',
+  },
+  dropZone: {
+    width: '100%',
+    minHeight: '200px',
+    padding: '40px 20px',
+    border: '3px dashed #2196F3',
+    borderRadius: '12px',
+    backgroundColor: '#f8f9fa',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dropZoneActive: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#1976D2',
+    transform: 'scale(1.02)',
+  },
+  dropZoneContent: {
+    textAlign: 'center',
+  },
+  dropZoneIcon: {
+    fontSize: '48px',
+    marginBottom: '15px',
+  },
+  dropZoneText: {
+    fontSize: '16px',
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: '8px',
+  },
+  dropZoneHint: {
+    fontSize: '14px',
+    color: '#666',
   },
   selectButton: {
     width: '100%',
