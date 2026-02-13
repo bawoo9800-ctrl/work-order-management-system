@@ -344,8 +344,9 @@ const PurchaseOrderListPage = () => {
 const styles = {
   container: {
     padding: '20px',
-    maxWidth: '1920px',
-    margin: '0 auto',
+    width: '100%',
+    minHeight: '100vh',
+    boxSizing: 'border-box',
   },
   header: {
     display: 'flex',
@@ -423,8 +424,7 @@ const styles = {
     gridTemplateColumns: 'repeat(auto-fill, minmax(520px, 1fr))',
     gap: '24px',
     paddingBottom: '40px',
-    maxWidth: '1920px',
-    margin: '0 auto',
+    width: '100%',
   },
   card: {
     backgroundColor: 'white',
@@ -500,7 +500,6 @@ const responsiveStyles = `
   @media (min-width: 2560px) {
     .purchase-order-grid {
       grid-template-columns: repeat(6, 1fr) !important;
-      max-width: 2560px;
     }
   }
   
@@ -508,7 +507,6 @@ const responsiveStyles = `
   @media (min-width: 1920px) and (max-width: 2559px) {
     .purchase-order-grid {
       grid-template-columns: repeat(5, 1fr) !important;
-      max-width: 1920px;
     }
   }
   
