@@ -284,6 +284,61 @@ export const getPurchaseOrdersBySupplier = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * 발주서 이미지 회전 및 저장
+ * POST /api/v1/purchase-orders/:id/rotate-image
+ * Body: { image_path: string, rotation: number (90, 180, 270) }
+ */
+export const rotatePurchaseOrderImage = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { image_path, rotation } = req.body;
+
+  if (!image_path) {
+    throw new AppError('이미지 경로가 필요합니다.', 400);
+  }
+
+  if (![90, 180, 270, -90].includes(parseInt(rotation))) {
+    throw new AppError('회전 각도는 90, 180, 270, -90만 가능합니다.', 400);
+  }
+
+  logger.info(`발주서 이미지 회전 시작: ID ${id}, 각도 ${rotation}°`);
+
+  try {
+    // Sharp를 사용하여 이미지 회전
+    const sharp = (await import('sharp')).default;
+    const fs = await import('fs');
+    const path = await import('path');
+    
+    // 이미지 파일 경로 (NAS 경로 또는 로컬 경로)
+    const storagePath = process.env.NAS_STORAGE_PATH || './uploads';
+    const fullPath = path.join(storagePath, image_path);
+    
+    if (!fs.existsSync(fullPath)) {
+      throw new AppError('이미지 파일을 찾을 수 없습니다.', 404);
+    }
+
+    // 이미지 회전
+    await sharp(fullPath)
+      .rotate(parseInt(rotation))
+      .toFile(fullPath + '.tmp');
+
+    // 원본 파일 교체
+    fs.unlinkSync(fullPath);
+    fs.renameSync(fullPath + '.tmp', fullPath);
+
+    logger.info(`이미지 회전 완료: ${image_path}, ${rotation}°`);
+
+    res.json({
+      success: true,
+      data: { message: '이미지가 회전되어 저장되었습니다.', image_path },
+      error: null,
+    });
+  } catch (error) {
+    logger.error(`이미지 회전 실패: ${error.message}`);
+    throw new AppError('이미지 회전에 실패했습니다: ' + error.message, 500);
+  }
+});
+
 export default {
   uploadPurchaseOrder,
   getAllPurchaseOrders,
@@ -292,4 +347,5 @@ export default {
   deletePurchaseOrder,
   getPurchaseOrderStats,
   getPurchaseOrdersBySupplier,
+  rotatePurchaseOrderImage,
 };

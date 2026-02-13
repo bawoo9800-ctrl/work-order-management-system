@@ -150,6 +150,64 @@ function ImageGalleryViewer({
     setRotation(prev => (prev + 90) % 360);
   };
   
+  // 회전 저장
+  const handleSaveRotation = async () => {
+    if (rotation === 0 || rotation === 360) {
+      alert('회전 각도가 0도입니다. 회전 후 저장해주세요.');
+      return;
+    }
+
+    if (!workOrder || !workOrder.id) {
+      alert('발주서 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    const currentImage = images[currentIndex];
+    if (!currentImage) {
+      alert('이미지를 찾을 수 없습니다.');
+      return;
+    }
+
+    // 이미지 경로 추출 (URL에서 /uploads/ 이후 부분)
+    const imagePath = currentImage.split('/uploads/')[1];
+    if (!imagePath) {
+      alert('이미지 경로가 올바르지 않습니다.');
+      return;
+    }
+
+    const confirmed = confirm(`현재 이미지를 ${rotation}도 회전하여 저장하시겠습니까?\n\n⚠️ 원본 이미지가 변경됩니다!`);
+    if (!confirmed) return;
+
+    try {
+      setUploading(true);
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      
+      await fetch(`${baseUrl}/api/v1/purchase-orders/${workOrder.id}/rotate-image`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image_path: imagePath,
+          rotation: rotation
+        })
+      });
+
+      alert('✅ 이미지가 회전되어 저장되었습니다!');
+      
+      // 회전 값 리셋
+      setRotation(0);
+      
+      // 페이지 새로고침하여 회전된 이미지 표시
+      window.location.reload();
+    } catch (error) {
+      console.error('이미지 회전 저장 실패:', error);
+      alert('이미지 회전 저장에 실패했습니다.');
+    } finally {
+      setUploading(false);
+    }
+  };
+  
   // 리셋
   const handleReset = () => {
     setScale(1);
@@ -514,6 +572,19 @@ function ImageGalleryViewer({
             </button>
             <button className="control-btn" onClick={handleRotate} title="회전 (R)">
               ↻
+            </button>
+            <button 
+              className="control-btn" 
+              onClick={handleSaveRotation} 
+              title="회전 저장"
+              disabled={rotation === 0 || uploading}
+              style={{
+                backgroundColor: rotation !== 0 ? '#4CAF50' : undefined,
+                color: rotation !== 0 ? 'white' : undefined,
+                cursor: rotation === 0 || uploading ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {uploading ? '⏳' : '💾'}
             </button>
             <button className="control-btn" onClick={() => setShowEditor(true)} title="이미지 보정">
               ✨
