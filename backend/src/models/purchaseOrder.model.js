@@ -79,7 +79,19 @@ export const getAllPurchaseOrders = async (options = {}) => {
   // 데이터 조회
   const dataSql = `
     SELECT 
-      po.*,
+      po.id, po.uuid, po.original_filename, po.storage_path,
+      po.file_size, po.mime_type, po.image_width, po.image_height,
+      po.images, po.image_count,
+      po.supplier_id,
+      DATE_FORMAT(po.order_date, '%Y-%m-%d') as order_date,
+      po.delivery_date, po.order_amount, po.currency,
+      po.items, po.item_count,
+      po.status, po.priority,
+      po.ocr_text, po.classification_method, po.confidence_score, po.reasoning,
+      po.memo, po.tags,
+      po.api_cost_usd, po.processing_time_ms,
+      po.uploaded_by, po.uploaded_from,
+      po.created_at, po.updated_at,
       s.contact_person as supplier_contact_person,
       s.phone as supplier_phone,
       COALESCE(po.supplier_name, s.name) as supplier_name
@@ -110,7 +122,19 @@ export const getAllPurchaseOrders = async (options = {}) => {
 export const getPurchaseOrderById = async (id) => {
   const sql = `
     SELECT 
-      po.*,
+      po.id, po.uuid, po.original_filename, po.storage_path,
+      po.file_size, po.mime_type, po.image_width, po.image_height,
+      po.images, po.image_count,
+      po.supplier_id,
+      DATE_FORMAT(po.order_date, '%Y-%m-%d') as order_date,
+      po.delivery_date, po.order_amount, po.currency,
+      po.items, po.item_count,
+      po.status, po.priority,
+      po.ocr_text, po.classification_method, po.confidence_score, po.reasoning,
+      po.memo, po.tags,
+      po.api_cost_usd, po.processing_time_ms,
+      po.uploaded_by, po.uploaded_from,
+      po.created_at, po.updated_at,
       s.contact_person as supplier_contact_person,
       s.phone as supplier_phone,
       s.email as supplier_email,
@@ -130,7 +154,19 @@ export const getPurchaseOrderById = async (id) => {
 export const getPurchaseOrderByUuid = async (uuid) => {
   const sql = `
     SELECT 
-      po.*,
+      po.id, po.uuid, po.original_filename, po.storage_path,
+      po.file_size, po.mime_type, po.image_width, po.image_height,
+      po.images, po.image_count,
+      po.supplier_id,
+      DATE_FORMAT(po.order_date, '%Y-%m-%d') as order_date,
+      po.delivery_date, po.order_amount, po.currency,
+      po.items, po.item_count,
+      po.status, po.priority,
+      po.ocr_text, po.classification_method, po.confidence_score, po.reasoning,
+      po.memo, po.tags,
+      po.api_cost_usd, po.processing_time_ms,
+      po.uploaded_by, po.uploaded_from,
+      po.created_at, po.updated_at,
       s.contact_person as supplier_contact_person,
       s.phone as supplier_phone,
       COALESCE(po.supplier_name, s.name) as supplier_name
