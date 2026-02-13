@@ -88,13 +88,29 @@ function ImageGalleryViewer({
   useEffect(() => {
     if (workOrder) {
       if (type === 'purchaseOrder') {
-        // 날짜를 로컬 시간대로 변환 (타임존 문제 해결)
+        // 날짜를 로컬 시간대로 변환 (타임존 문제 완전 해결)
         let formattedDate = '';
         if (workOrder.order_date) {
-          // ISO 날짜 문자열에서 날짜 부분만 추출 (YYYY-MM-DD)
-          // 이렇게 하면 타임존 변환 없이 원본 날짜를 그대로 사용
-          const dateStr = workOrder.order_date.split('T')[0];
-          formattedDate = dateStr;
+          // ISO 날짜 문자열에서 날짜 부분만 추출
+          // 방법 1: 'T' 이전 부분 추출
+          let dateStr = workOrder.order_date.split('T')[0];
+          
+          // 방법 2: 만약 'T'가 없다면 공백으로 split
+          if (!dateStr.includes('-')) {
+            dateStr = workOrder.order_date.split(' ')[0];
+          }
+          
+          // 최종 확인: YYYY-MM-DD 형식인지 검증
+          if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            formattedDate = dateStr;
+          } else {
+            // 형식이 맞지 않으면 Date 객체 사용하되 UTC로 처리
+            const date = new Date(workOrder.order_date + 'T00:00:00Z');
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(date.getUTCDate()).padStart(2, '0');
+            formattedDate = `${year}-${month}-${day}`;
+          }
         }
         
         setModalForm({
