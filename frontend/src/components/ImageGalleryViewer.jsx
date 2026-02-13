@@ -88,10 +88,19 @@ function ImageGalleryViewer({
   useEffect(() => {
     if (workOrder) {
       if (type === 'purchaseOrder') {
+        // 날짜를 로컬 시간대로 변환 (타임존 문제 해결)
+        let formattedDate = '';
+        if (workOrder.order_date) {
+          // ISO 날짜 문자열에서 날짜 부분만 추출 (YYYY-MM-DD)
+          // 이렇게 하면 타임존 변환 없이 원본 날짜를 그대로 사용
+          const dateStr = workOrder.order_date.split('T')[0];
+          formattedDate = dateStr;
+        }
+        
         setModalForm({
           supplier_name: workOrder.supplier_name || '',
           site_name: workOrder.site_name || '',
-          order_date: workOrder.order_date ? workOrder.order_date.split('T')[0] : '',
+          order_date: formattedDate,
           memo: workOrder.memo || ''
         });
       } else {

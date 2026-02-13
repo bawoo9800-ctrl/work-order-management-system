@@ -183,30 +183,6 @@ const PurchaseOrderListPage = () => {
     }
   };
   
-  // 상태 배지 색상
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'pending': return '#FFA500';
-      case 'confirmed': return '#4CAF50';
-      case 'shipped': return '#2196F3';
-      case 'delivered': return '#9C27B0';
-      case 'cancelled': return '#F44336';
-      default: return '#757575';
-    }
-  };
-  
-  // 상태 한글명
-  const getStatusLabel = (status) => {
-    switch(status) {
-      case 'pending': return '대기';
-      case 'confirmed': return '확인';
-      case 'shipped': return '배송중';
-      case 'delivered': return '완료';
-      case 'cancelled': return '취소';
-      default: return status;
-    }
-  };
-  
   return (
     <div style={styles.container}>
       {/* 헤더 */}
@@ -311,14 +287,6 @@ const PurchaseOrderListPage = () => {
                   <h3 style={styles.vendorName}>
                     {order.supplier_name || '발주처 미지정'}
                   </h3>
-                  <span 
-                    style={{
-                      ...styles.statusBadge,
-                      backgroundColor: getStatusColor(order.status)
-                    }}
-                  >
-                    {getStatusLabel(order.status)}
-                  </span>
                 </div>
                 
                 <div style={styles.info}>
@@ -507,13 +475,6 @@ const styles = {
     fontWeight: 'bold',
     color: '#333',
     margin: 0,
-  },
-  statusBadge: {
-    padding: '4px 8px',
-    borderRadius: '12px',
-    color: 'white',
-    fontSize: '12px',
-    fontWeight: 'bold',
   },
   info: {
     fontSize: '13px',
