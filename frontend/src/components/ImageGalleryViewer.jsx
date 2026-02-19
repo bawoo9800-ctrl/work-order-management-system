@@ -395,11 +395,21 @@ function ImageGalleryViewer({
     if (!workOrder || !onUpdateWorkOrder) return;
     
     try {
+      console.log('💾 저장 시도:', {
+        id: workOrder.id,
+        data: modalForm
+      });
+      
       await onUpdateWorkOrder(workOrder.id, modalForm);
+      
+      console.log('✅ 저장 성공');
       alert('저장되었습니다!');
+      
+      // 모달을 닫아서 변경사항 확인 가능
+      // onClose();  // 주석: 계속 볼 수 있도록 닫지 않음
     } catch (error) {
       console.error('❌ 저장 실패:', error);
-      alert('저장에 실패했습니다.');
+      alert('저장에 실패했습니다.\n' + (error.message || '알 수 없는 오류'));
     }
   };
   
