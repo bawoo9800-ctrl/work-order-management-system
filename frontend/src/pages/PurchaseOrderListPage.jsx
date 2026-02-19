@@ -147,6 +147,19 @@ const PurchaseOrderListPage = () => {
       const updatedOrder = response.data?.data;
       const updatedDate = updatedOrder?.order_date;
       
+      console.log('📝 서버에서 받은 업데이트된 발주서:', updatedOrder);
+      
+      // 현재 열려있는 모달의 발주서를 업데이트
+      if (zoomedOrder && zoomedOrder.id === id) {
+        console.log('🔄 모달 상태 업데이트 중...');
+        setZoomedOrder({
+          ...zoomedOrder,
+          ...updatedOrder,
+          imageUrls: zoomedOrder.imageUrls // 이미지 URL은 유지
+        });
+        console.log('✅ 모달 상태 업데이트 완료');
+      }
+      
       // 날짜가 변경되었는지 확인
       if (updatedDate) {
         const orderDateOnly = updatedDate.split('T')[0]; // YYYY-MM-DD만 추출
