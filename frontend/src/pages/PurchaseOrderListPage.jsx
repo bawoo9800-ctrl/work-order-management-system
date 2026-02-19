@@ -148,15 +148,25 @@ const PurchaseOrderListPage = () => {
       const updatedDate = updatedOrder?.order_date;
       
       console.log('📝 서버에서 받은 업데이트된 발주서:', updatedOrder);
+      console.log('📝 현장명 확인:', {
+        서버응답_site_name: updatedOrder?.site_name,
+        서버응답_supplier_name: updatedOrder?.supplier_name,
+        현재모달_site_name: zoomedOrder?.site_name
+      });
       
       // 현재 열려있는 모달의 발주서를 업데이트
       if (zoomedOrder && zoomedOrder.id === id) {
         console.log('🔄 모달 상태 업데이트 중...');
-        setZoomedOrder({
+        console.log('업데이트 전 zoomedOrder:', zoomedOrder);
+        
+        const newZoomedOrder = {
           ...zoomedOrder,
           ...updatedOrder,
           imageUrls: zoomedOrder.imageUrls // 이미지 URL은 유지
-        });
+        };
+        
+        console.log('업데이트 후 newZoomedOrder:', newZoomedOrder);
+        setZoomedOrder(newZoomedOrder);
         console.log('✅ 모달 상태 업데이트 완료');
       }
       
@@ -174,7 +184,12 @@ const PurchaseOrderListPage = () => {
       }
       
       // 날짜 변경이 없으면 현재 필터로 재조회
-      fetchPurchaseOrdersByDate(searchQuery ? null : selectedDate);
+      // 단, 모달이 열려있으면 재조회하지 않음 (모달 상태 유지)
+      if (!zoomedOrder) {
+        fetchPurchaseOrdersByDate(searchQuery ? null : selectedDate);
+      } else {
+        console.log('📌 모달이 열려있어 목록 재조회 생략 (모달 상태 유지)');
+      }
     } catch (error) {
       console.error('발주서 수정 실패:', error);
       alert('발주서 수정에 실패했습니다.');
