@@ -212,7 +212,7 @@ const PurchaseOrderListPage = () => {
   };
   
   // 🆕 이미지 추가 후 처리
-  const handleImagesAdded = (orderId, updatedData) => {
+  const handleImagesAdded = async (orderId, updatedData) => {
     console.log('📸 이미지 추가 완료 - 모달 업데이트:', orderId, updatedData);
     
     // 이미지 목록 파싱
@@ -236,16 +236,51 @@ const PurchaseOrderListPage = () => {
     
     // zoomedOrder 상태 업데이트 (이미지 목록 갱신)
     if (zoomedOrder && zoomedOrder.id === orderId) {
-      setZoomedOrder({
+      const updatedZoomedOrder = {
         ...zoomedOrder,
         ...updatedData,
         imageUrls: newImageUrls
-      });
+      };
+      setZoomedOrder(updatedZoomedOrder);
       console.log('✅ 모달 이미지 목록 업데이트 완료:', newImageUrls.length, '장');
     }
     
     // 발주서 목록도 업데이트
-    fetchPurchaseOrdersByDate(searchQuery ? null : selectedDate);
+    await fetchPurchaseOrdersByDate(searchQuery ? null : selectedDate);
+    
+    // 목록 재조회 후, 서버에서 최신 데이터 다시 가져와서 zoomedOrder 갱신
+    try {
+      console.log('🔄 서버에서 최신 발주서 데이터 재조회:', orderId);
+      const response = await axios.get(`${API_BASE_URL}/api/v1/purchase-orders/${orderId}`);
+      const latestOrder = response.data?.data;
+      
+      if (latestOrder) {
+        // 최신 이미지 목록 파싱
+        let latestImages = latestOrder.images;
+        if (typeof latestImages === 'string') {
+          try {
+            latestImages = JSON.parse(latestImages);
+          } catch (e) {
+            latestImages = [];
+          }
+        }
+        
+        const latestImageUrls = latestImages.map(img => 
+          `${API_BASE_URL}/uploads/${img.path || img.storage_path}`
+        );
+        
+        // zoomedOrder를 최신 데이터로 완전히 교체
+        if (zoomedOrder && zoomedOrder.id === orderId) {
+          setZoomedOrder({
+            ...latestOrder,
+            imageUrls: latestImageUrls
+          });
+          console.log('✅ 서버 최신 데이터로 모달 업데이트:', latestImageUrls.length, '장');
+        }
+      }
+    } catch (error) {
+      console.error('❌ 최신 데이터 조회 실패:', error);
+    }
   };
   
   return (
