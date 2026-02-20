@@ -390,13 +390,22 @@ function PurchaseOrderUploadPage() {
       
       alert(`✅ ${files.length}장의 이미지가 업로드되었습니다!`);
       
-      // 목록 페이지로 이동 (업로드한 날짜로 필터링)
-      navigate('/purchase-orders', { 
-        state: { 
-          uploadedDate: orderDate,
-          showAll: !orderDate // 날짜가 없으면 전체 보기
-        } 
-      });
+      // 업로드 페이지에 계속 머물면서 폼 초기화
+      // 파일 목록 초기화
+      setFiles([]);
+      
+      // 입력 필드 초기화 (전송자명은 유지)
+      setVendorName('');
+      setSiteName('');
+      setOrderDate(today);
+      setMemo('');
+      
+      // 파일 input 초기화
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      
+      console.log('📝 폼 초기화 완료 - 다음 업로드 준비됨');
       
     } catch (err) {
       console.error('❌ 업로드 실패:', err);
