@@ -463,25 +463,51 @@ export const deleteImageFromPurchaseOrder = asyncHandler(async (req, res) => {
   // 기존 images JSON 배열 파싱
   let images = [];
   try {
-    images = purchaseOrder.images ? JSON.parse(purchaseOrder.images) : [];
+    let rawImages = purchaseOrder.images;
+    logger.info('이미지 데이터 파싱 시작', { 
+      purchaseOrderId: id,
+      rawType: typeof rawImages,
+      rawValue: rawImages ? rawImages.substring(0, 100) : 'null'
+    });
+    
+    images = rawImages ? JSON.parse(rawImages) : [];
+    logger.info('1차 파싱 완료', { 
+      purchaseOrderId: id,
+      type: typeof images,
+      isArray: Array.isArray(images),
+      value: typeof images === 'string' ? images.substring(0, 100) : `Array(${images?.length})`
+    });
     
     // 이중 인코딩 체크: 파싱 후에도 문자열이면 한 번 더 파싱
     if (typeof images === 'string') {
       logger.warn('이중 JSON 인코딩 감지, 2차 파싱 시도', { purchaseOrderId: id });
       images = JSON.parse(images);
+      logger.info('2차 파싱 완료', { 
+        purchaseOrderId: id,
+        type: typeof images,
+        isArray: Array.isArray(images)
+      });
     }
     
     // 배열이 아니면 빈 배열로 초기화
     if (!Array.isArray(images)) {
       logger.warn('images가 배열이 아님, 빈 배열로 초기화', { 
         purchaseOrderId: id, 
-        imagesType: typeof images 
+        imagesType: typeof images,
+        imagesValue: JSON.stringify(images)
       });
       images = [];
     }
+    
+    logger.info('최종 파싱 결과', {
+      purchaseOrderId: id,
+      isArray: Array.isArray(images),
+      length: images.length
+    });
   } catch (e) {
     logger.error('images JSON 파싱 실패', { 
       error: e.message,
+      stack: e.stack,
       purchaseOrderId: id,
       rawImages: purchaseOrder.images 
     });
