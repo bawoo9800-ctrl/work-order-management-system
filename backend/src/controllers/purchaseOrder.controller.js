@@ -464,8 +464,27 @@ export const deleteImageFromPurchaseOrder = asyncHandler(async (req, res) => {
   let images = [];
   try {
     images = purchaseOrder.images ? JSON.parse(purchaseOrder.images) : [];
+    
+    // 이중 인코딩 체크: 파싱 후에도 문자열이면 한 번 더 파싱
+    if (typeof images === 'string') {
+      logger.warn('이중 JSON 인코딩 감지, 2차 파싱 시도', { purchaseOrderId: id });
+      images = JSON.parse(images);
+    }
+    
+    // 배열이 아니면 빈 배열로 초기화
+    if (!Array.isArray(images)) {
+      logger.warn('images가 배열이 아님, 빈 배열로 초기화', { 
+        purchaseOrderId: id, 
+        imagesType: typeof images 
+      });
+      images = [];
+    }
   } catch (e) {
-    logger.error('images JSON 파싱 실패', { error: e.message });
+    logger.error('images JSON 파싱 실패', { 
+      error: e.message,
+      purchaseOrderId: id,
+      rawImages: purchaseOrder.images 
+    });
     throw new AppError('이미지 데이터 파싱 실패', 500);
   }
 
