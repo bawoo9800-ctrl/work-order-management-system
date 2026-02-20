@@ -594,15 +594,17 @@ function ImageGalleryViewer({
                 className="nav-button nav-prev"
                 onClick={handlePrevious}
                 disabled={currentIndex === 0}
+                aria-label="이전 이미지"
               >
-                ◀
+                <span className="nav-arrow"></span>
               </button>
               <button
                 className="nav-button nav-next"
                 onClick={handleNext}
                 disabled={currentIndex === images.length - 1}
+                aria-label="다음 이미지"
               >
-                ▶
+                <span className="nav-arrow"></span>
               </button>
             </>
           )}
@@ -916,31 +918,69 @@ function ImageGalleryViewer({
           position: absolute;
           top: 50%;
           transform: translateY(-50%);
-          width: 50px;
-          height: 50px;
-          background: rgba(0, 0, 0, 0.6);
-          border: 2px solid rgba(255, 255, 255, 0.3);
-          border-radius: 50%;
-          color: white;
-          font-size: 24px;
+          width: 48px;
+          height: 48px;
+          background: rgba(0, 0, 0, 0.5);
+          border: 2px solid rgba(255, 255, 255, 0.8);
+          border-radius: 8px;
           cursor: pointer;
-          transition: all 0.2s;
-          backdrop-filter: blur(10px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          backdrop-filter: blur(8px);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
           z-index: 10;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+        }
+        
+        .nav-arrow {
+          width: 0;
+          height: 0;
+          border-style: solid;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .nav-prev .nav-arrow {
+          border-width: 8px 12px 8px 0;
+          border-color: transparent #ffffff transparent transparent;
+          margin-right: 2px;
+        }
+        
+        .nav-next .nav-arrow {
+          border-width: 8px 0 8px 12px;
+          border-color: transparent transparent transparent #ffffff;
+          margin-left: 2px;
         }
         
         .nav-button:hover:not(:disabled) {
-          background: rgba(0, 0, 0, 0.8);
-          border-color: rgba(255, 255, 255, 0.5);
-          transform: translateY(-50%) scale(1.15);
-          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+          background: rgba(0, 0, 0, 0.75);
+          border-color: #ffffff;
+          transform: translateY(-50%) scale(1.1);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        .nav-button:hover:not(:disabled) .nav-arrow {
+          filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8));
+        }
+        
+        .nav-button:active:not(:disabled) {
+          transform: translateY(-50%) scale(0.95);
         }
         
         .nav-button:disabled {
-          opacity: 0.4;
+          opacity: 0.3;
           cursor: not-allowed;
-          background: rgba(0, 0, 0, 0.3);
+          background: rgba(0, 0, 0, 0.2);
+          border-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .nav-button:disabled .nav-arrow {
+          border-color: transparent rgba(255, 255, 255, 0.3) transparent transparent;
+        }
+        
+        .nav-next:disabled .nav-arrow {
+          border-color: transparent transparent transparent rgba(255, 255, 255, 0.3);
         }
         
         .nav-prev {
