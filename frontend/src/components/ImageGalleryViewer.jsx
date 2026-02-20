@@ -918,24 +918,29 @@ function ImageGalleryViewer({
           transform: translateY(-50%);
           width: 50px;
           height: 50px;
-          background: rgba(255, 255, 255, 0.2);
-          border: none;
+          background: rgba(0, 0, 0, 0.6);
+          border: 2px solid rgba(255, 255, 255, 0.3);
           border-radius: 50%;
           color: white;
           font-size: 24px;
           cursor: pointer;
           transition: all 0.2s;
           backdrop-filter: blur(10px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+          z-index: 10;
         }
         
         .nav-button:hover:not(:disabled) {
-          background: rgba(255, 255, 255, 0.3);
-          transform: translateY(-50%) scale(1.1);
+          background: rgba(0, 0, 0, 0.8);
+          border-color: rgba(255, 255, 255, 0.5);
+          transform: translateY(-50%) scale(1.15);
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
         }
         
         .nav-button:disabled {
-          opacity: 0.3;
+          opacity: 0.4;
           cursor: not-allowed;
+          background: rgba(0, 0, 0, 0.3);
         }
         
         .nav-prev {
