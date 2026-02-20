@@ -235,6 +235,12 @@ const PurchaseOrderListPage = () => {
       }
     }
     
+    // 배열이 아니면 빈 배열로 초기화
+    if (!Array.isArray(parsedImages)) {
+      console.warn('parsedImages가 배열이 아닙니다:', parsedImages);
+      parsedImages = [];
+    }
+    
     // 이미지 URL 생성
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
     const newImageUrls = parsedImages.map(img => 
@@ -261,18 +267,34 @@ const PurchaseOrderListPage = () => {
     try {
       console.log('🔄 서버에서 최신 발주서 데이터 재조회:', orderId);
       const response = await axios.get(`${API_BASE_URL}/api/v1/purchase-orders/${orderId}`);
+      console.log('📦 서버 응답 전체:', response.data);
       const latestOrder = response.data?.data;
+      console.log('📦 latestOrder:', latestOrder);
+      console.log('📦 latestOrder.images 타입:', typeof latestOrder?.images);
+      console.log('📦 latestOrder.images 값:', latestOrder?.images);
       
       if (latestOrder) {
         // 최신 이미지 목록 파싱
         let latestImages = latestOrder.images;
+        console.log('🔍 파싱 전 latestImages:', latestImages, '타입:', typeof latestImages);
+        
         if (typeof latestImages === 'string') {
           try {
             latestImages = JSON.parse(latestImages);
+            console.log('✅ JSON 파싱 성공, latestImages:', latestImages);
           } catch (e) {
+            console.error('최신 이미지 파싱 실패:', e);
             latestImages = [];
           }
         }
+        
+        // 배열이 아니면 빈 배열로 초기화
+        console.log('🔍 배열 검증 전 latestImages:', latestImages, 'Array.isArray:', Array.isArray(latestImages));
+        if (!Array.isArray(latestImages)) {
+          console.warn('⚠️ latestImages가 배열이 아닙니다:', latestImages, '타입:', typeof latestImages);
+          latestImages = [];
+        }
+        console.log('✅ 최종 latestImages 배열:', latestImages, '길이:', latestImages.length);
         
         const latestImageUrls = latestImages.map(img => 
           `${API_BASE_URL}/uploads/${img.path || img.storage_path}`
