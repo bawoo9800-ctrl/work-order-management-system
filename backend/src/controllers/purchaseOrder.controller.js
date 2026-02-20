@@ -441,6 +441,95 @@ export const addImagesToPurchaseOrder = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * 발주서 개별 이미지 삭제
+ * DELETE /api/v1/purchase-orders/:id/images/:imageIndex
+ */
+export const deleteImageFromPurchaseOrder = asyncHandler(async (req, res) => {
+  const { id, imageIndex } = req.params;
+  const startTime = Date.now();
+
+  logger.info(`발주서 이미지 삭제 시작`, {
+    purchaseOrderId: id,
+    imageIndex: parseInt(imageIndex),
+  });
+
+  // 발주서 조회
+  const purchaseOrder = await PurchaseOrderModel.getPurchaseOrderById(parseInt(id));
+  if (!purchaseOrder) {
+    throw new AppError('발주서를 찾을 수 없습니다.', 404);
+  }
+
+  // 기존 images JSON 배열 파싱
+  let images = [];
+  try {
+    images = purchaseOrder.images ? JSON.parse(purchaseOrder.images) : [];
+  } catch (e) {
+    logger.error('images JSON 파싱 실패', { error: e.message });
+    throw new AppError('이미지 데이터 파싱 실패', 500);
+  }
+
+  // 레거시 데이터 처리
+  if (images.length === 0 && purchaseOrder.storage_path) {
+    images.push({
+      path: purchaseOrder.storage_path,
+      uuid: purchaseOrder.uuid,
+      filename: purchaseOrder.original_filename,
+      file_size: purchaseOrder.file_size,
+      mime_type: purchaseOrder.mime_type,
+      width: purchaseOrder.image_width,
+      height: purchaseOrder.image_height,
+    });
+  }
+
+  const index = parseInt(imageIndex);
+  
+  // 인덱스 검증
+  if (index < 0 || index >= images.length) {
+    throw new AppError('유효하지 않은 이미지 인덱스입니다.', 400);
+  }
+
+  // 최소 1장은 유지해야 함
+  if (images.length === 1) {
+    throw new AppError('최소 1장의 이미지는 유지해야 합니다. 발주서 전체를 삭제하려면 발주서 삭제 기능을 사용하세요.', 400);
+  }
+
+  const deletedImage = images[index];
+  
+  // 이미지 배열에서 제거
+  images.splice(index, 1);
+
+  // 데이터베이스 업데이트
+  await PurchaseOrderModel.updatePurchaseOrder(parseInt(id), {
+    images: JSON.stringify(images),
+    image_count: images.length,
+    updated_at: new Date(),
+  });
+
+  const processingTime = Date.now() - startTime;
+
+  logger.info('발주서 이미지 삭제 완료', {
+    purchaseOrderId: id,
+    deletedIndex: index,
+    deletedImage: deletedImage.filename,
+    remainingImages: images.length,
+    processingTime,
+  });
+
+  res.json({
+    success: true,
+    data: {
+      message: `이미지가 삭제되었습니다. (남은 이미지: ${images.length}장)`,
+      purchaseOrderId: id,
+      deletedIndex: index,
+      remainingCount: images.length,
+      images: images,
+      processingTime,
+    },
+    error: null,
+  });
+});
+
 export default {
   uploadPurchaseOrder,
   getAllPurchaseOrders,
@@ -450,5 +539,6 @@ export default {
   getPurchaseOrderStats,
   getPurchaseOrdersBySupplier,
   rotatePurchaseOrderImage,
-  addImagesToPurchaseOrder,  // 🆕 추가
+  addImagesToPurchaseOrder,
+  deleteImageFromPurchaseOrder,  // 🆕 추가
 };

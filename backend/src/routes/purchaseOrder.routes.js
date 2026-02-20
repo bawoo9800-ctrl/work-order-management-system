@@ -75,4 +75,13 @@ router.post(
   purchaseOrderController.addImagesToPurchaseOrder
 );
 
+/**
+ * DELETE /api/v1/purchase-orders/:id/images/:imageIndex
+ * 발주서 개별 이미지 삭제
+ */
+router.delete(
+  '/:id/images/:imageIndex',
+  purchaseOrderController.deleteImageFromPurchaseOrder
+);
+
 export default router;

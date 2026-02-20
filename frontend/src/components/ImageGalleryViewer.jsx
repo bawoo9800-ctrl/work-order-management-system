@@ -536,6 +536,63 @@ function ImageGalleryViewer({
     }
   };
   
+  // 🆕 현재 이미지 삭제 처리
+  const handleDeleteCurrentImage = async () => {
+    if (!workOrder || images.length <= 1) {
+      alert('⚠️ 최소 1장의 이미지는 유지해야 합니다.');
+      return;
+    }
+    
+    const confirmDelete = window.confirm(
+      `현재 이미지를 삭제하시겠습니까?\n\n` +
+      `현재: ${currentIndex + 1}/${images.length}장\n` +
+      `삭제 후: ${images.length - 1}장`
+    );
+    
+    if (!confirmDelete) return;
+    
+    setUploading(true);
+    
+    try {
+      console.log('🗑️ 이미지 삭제 시작:', workOrder.id, 'index:', currentIndex);
+      
+      // type에 따라 올바른 API 경로 선택
+      const apiPath = type === 'purchaseOrder'
+        ? `/api/v1/purchase-orders/${workOrder.id}/images/${currentIndex}`
+        : `/api/v1/work-orders/${workOrder.id}/images/${currentIndex}`;
+      
+      console.log('🌐 API 경로:', apiPath);
+      
+      // API 호출
+      const response = await fetch(apiPath, {
+        method: 'DELETE',
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ 이미지 삭제 성공:', result.data);
+        alert(`✅ 이미지가 삭제되었습니다! (남은 이미지: ${result.data.remainingCount}장)`);
+        
+        // 부모 컴포넌트에 업데이트 알림
+        if (onImagesAdded && result.data) {
+          console.log('🔄 부모 컴포넌트에 이미지 삭제 알림');
+          onImagesAdded(workOrder.id, result.data);
+        } else {
+          // 콜백이 없으면 페이지 리로드
+          window.location.reload();
+        }
+      } else {
+        throw new Error(result.message || '이미지 삭제 실패');
+      }
+    } catch (error) {
+      console.error('❌ 이미지 삭제 실패:', error);
+      alert('이미지 삭제에 실패했습니다.\n' + error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+  
   return (
     <div className="image-gallery-viewer">
       {/* 배경 오버레이 */}
@@ -639,6 +696,21 @@ function ImageGalleryViewer({
             <button className="control-btn" onClick={() => setShowEditor(true)} title="이미지 보정">
               ✨
             </button>
+            {images.length > 1 && (
+              <button 
+                className="control-btn delete-btn" 
+                onClick={handleDeleteCurrentImage} 
+                title="현재 이미지 삭제"
+                disabled={uploading}
+                style={{
+                  backgroundColor: '#f44336',
+                  color: 'white',
+                  cursor: uploading ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {uploading ? '⏳' : '🗑️'}
+              </button>
+            )}
             <button className="control-btn" onClick={handleDownload} title="다운로드">
               ⬇
             </button>
