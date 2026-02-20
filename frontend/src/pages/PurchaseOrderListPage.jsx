@@ -119,12 +119,19 @@ const PurchaseOrderListPage = () => {
     if (order.images) {
       try {
         const parsed = typeof order.images === 'string' ? JSON.parse(order.images) : order.images;
-        images = parsed.map(img => `${API_BASE_URL}/uploads/${img.path}`);
+        
+        // parsed가 배열인지 확인
+        if (Array.isArray(parsed)) {
+          images = parsed.map(img => `${API_BASE_URL}/uploads/${img.path || img.storage_path}`);
+        } else {
+          console.warn('이미지 데이터가 배열이 아닙니다:', parsed);
+        }
       } catch (e) {
-        console.error('이미지 파싱 오류:', e);
+        console.error('이미지 파싱 오류:', e, 'order.images:', order.images);
       }
     }
     
+    // 이미지가 없으면 레거시 storage_path 사용
     if (images.length === 0 && order.storage_path) {
       images = [`${API_BASE_URL}/uploads/${order.storage_path}`];
     }
@@ -132,6 +139,8 @@ const PurchaseOrderListPage = () => {
     if (images.length > 0) {
       setZoomedImage(images[0]);
       setZoomedOrder({ ...order, imageUrls: images });
+    } else {
+      console.warn('이미지가 없습니다. order:', order);
     }
   };
   
