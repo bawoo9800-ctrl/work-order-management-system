@@ -65,4 +65,14 @@ router.delete('/:id', purchaseOrderController.deletePurchaseOrder);
  */
 router.post('/:id/rotate-image', purchaseOrderController.rotatePurchaseOrderImage);
 
+/**
+ * POST /api/v1/purchase-orders/:id/add-images
+ * 발주서에 추가 이미지 업로드
+ */
+router.post(
+  '/:id/add-images',
+  uploadMultiple,
+  purchaseOrderController.addImagesToPurchaseOrder
+);
+
 export default router;

@@ -339,6 +339,108 @@ export const rotatePurchaseOrderImage = asyncHandler(async (req, res) => {
   }
 });
 
+/**
+ * 발주서에 추가 이미지 업로드
+ * POST /api/v1/purchase-orders/:id/add-images
+ * Files: images[] (다중 이미지)
+ */
+export const addImagesToPurchaseOrder = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const startTime = Date.now();
+
+  // 파일 검증 (다중 또는 단일)
+  const files = req.files || (req.file ? [req.file] : []);
+  
+  if (files.length === 0) {
+    throw new AppError('이미지 파일이 필요합니다.', 400);
+  }
+
+  logger.info(`발주서 추가 이미지 업로드 시작: ${files.length}장`, {
+    purchaseOrderId: id,
+    fileCount: files.length,
+  });
+
+  // 발주서 조회
+  const purchaseOrder = await PurchaseOrderModel.getPurchaseOrderById(parseInt(id));
+  if (!purchaseOrder) {
+    throw new AppError('발주서를 찾을 수 없습니다.', 404);
+  }
+
+  // 기존 images JSON 배열 파싱
+  let images = [];
+  try {
+    images = purchaseOrder.images ? JSON.parse(purchaseOrder.images) : [];
+  } catch (e) {
+    logger.error('images JSON 파싱 실패', { error: e.message });
+    images = [];
+  }
+
+  // 첫 번째 이미지가 없는 경우 (레거시 데이터)
+  if (images.length === 0 && purchaseOrder.storage_path) {
+    images.push({
+      path: purchaseOrder.storage_path,
+      uuid: purchaseOrder.uuid,
+      filename: purchaseOrder.original_filename,
+      file_size: purchaseOrder.file_size,
+      mime_type: purchaseOrder.mime_type,
+      width: purchaseOrder.image_width,
+      height: purchaseOrder.image_height,
+    });
+  }
+
+  // 모든 이미지 처리 및 저장
+  const newImages = [];
+  for (const file of files) {
+    const imageResult = await imageProcessor.processAndSaveImage(
+      file.buffer, 
+      file.originalname,
+      'purchase_orders'  // 발주서 폴더에 저장
+    );
+    
+    const newImage = {
+      path: imageResult.storagePath,
+      uuid: imageResult.uuid,
+      filename: imageResult.originalFilename,
+      file_size: imageResult.fileSize,
+      mime_type: imageResult.mimeType,
+      width: imageResult.imageWidth,
+      height: imageResult.imageHeight,
+    };
+    
+    images.push(newImage);
+    newImages.push(newImage);
+  }
+
+  // 데이터베이스 업데이트
+  await PurchaseOrderModel.updatePurchaseOrder(parseInt(id), {
+    images: JSON.stringify(images),
+    image_count: images.length,
+    updated_at: new Date(),
+  });
+
+  const processingTime = Date.now() - startTime;
+
+  logger.info('발주서 추가 이미지 업로드 완료', {
+    purchaseOrderId: id,
+    addedCount: newImages.length,
+    totalImages: images.length,
+    processingTime,
+  });
+
+  res.json({
+    success: true,
+    data: {
+      message: `${newImages.length}장의 이미지가 추가되었습니다. (총 ${images.length}장)`,
+      purchaseOrderId: id,
+      addedCount: newImages.length,
+      totalCount: images.length,
+      images: images,
+      processingTime,
+    },
+    error: null,
+  });
+});
+
 export default {
   uploadPurchaseOrder,
   getAllPurchaseOrders,
@@ -348,4 +450,5 @@ export default {
   getPurchaseOrderStats,
   getPurchaseOrdersBySupplier,
   rotatePurchaseOrderImage,
+  addImagesToPurchaseOrder,  // 🆕 추가
 };

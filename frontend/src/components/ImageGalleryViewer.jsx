@@ -493,10 +493,17 @@ function ImageGalleryViewer({
         formData.append('images', file);
       });
       
-      console.log('📸 사진 추가 시작:', workOrder.id, selectedFiles.length);
+      console.log('📸 사진 추가 시작:', workOrder.id, selectedFiles.length, 'type:', type);
+      
+      // type에 따라 올바른 API 경로 선택
+      const apiPath = type === 'purchaseOrder' 
+        ? `/api/v1/purchase-orders/${workOrder.id}/add-images`
+        : `/api/v1/work-orders/${workOrder.id}/add-images`;
+      
+      console.log('🌐 API 경로:', apiPath);
       
       // API 호출
-      const response = await fetch(`/api/v1/work-orders/${workOrder.id}/add-images`, {
+      const response = await fetch(apiPath, {
         method: 'POST',
         body: formData,
       });
