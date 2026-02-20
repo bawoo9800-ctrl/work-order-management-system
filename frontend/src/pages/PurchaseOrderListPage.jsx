@@ -211,6 +211,43 @@ const PurchaseOrderListPage = () => {
     }
   };
   
+  // 🆕 이미지 추가 후 처리
+  const handleImagesAdded = (orderId, updatedData) => {
+    console.log('📸 이미지 추가 완료 - 모달 업데이트:', orderId, updatedData);
+    
+    // 이미지 목록 파싱
+    let parsedImages = updatedData.images;
+    if (typeof parsedImages === 'string') {
+      try {
+        parsedImages = JSON.parse(parsedImages);
+      } catch (e) {
+        console.error('이미지 파싱 실패:', e);
+        parsedImages = [];
+      }
+    }
+    
+    // 이미지 URL 생성
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+    const newImageUrls = parsedImages.map(img => 
+      `${API_BASE_URL}/uploads/${img.path || img.storage_path}`
+    );
+    
+    console.log('🔄 새 이미지 URL 목록:', newImageUrls);
+    
+    // zoomedOrder 상태 업데이트 (이미지 목록 갱신)
+    if (zoomedOrder && zoomedOrder.id === orderId) {
+      setZoomedOrder({
+        ...zoomedOrder,
+        ...updatedData,
+        imageUrls: newImageUrls
+      });
+      console.log('✅ 모달 이미지 목록 업데이트 완료:', newImageUrls.length, '장');
+    }
+    
+    // 발주서 목록도 업데이트
+    fetchPurchaseOrdersByDate(searchQuery ? null : selectedDate);
+  };
+  
   return (
     <div style={styles.container}>
       {/* 헤더 */}
@@ -360,6 +397,7 @@ const PurchaseOrderListPage = () => {
           workOrder={zoomedOrder}
           onUpdateWorkOrder={handleUpdatePurchaseOrder}
           onDeleteWorkOrder={handleDeletePurchaseOrder}
+          onImagesAdded={handleImagesAdded}
           clients={clients}
           type="purchaseOrder"
         />

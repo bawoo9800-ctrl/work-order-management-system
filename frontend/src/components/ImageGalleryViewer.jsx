@@ -22,6 +22,7 @@ function ImageGalleryViewer({
   workOrder = null,
   onUpdateWorkOrder = null,
   onDeleteWorkOrder = null,
+  onImagesAdded = null, // 🆕 이미지 추가 후 콜백
   clients = [],
   type = 'workOrder' // 'workOrder' 또는 'purchaseOrder'
 }) {
@@ -503,10 +504,15 @@ function ImageGalleryViewer({
       const result = await response.json();
       
       if (result.success) {
+        console.log('✅ 사진 추가 성공:', result.data);
         alert(`✅ ${selectedFiles.length}장의 사진이 추가되었습니다!`);
         
-        // 갤러리 새로고침
-        if (onUpdateWorkOrder) {
+        // 부모 컴포넌트에 이미지 추가 알림
+        if (onImagesAdded && result.data) {
+          console.log('🔄 부모 컴포넌트에 이미지 추가 알림');
+          onImagesAdded(workOrder.id, result.data);
+        } else {
+          // 콜백이 없으면 페이지 리로드 (기존 동작)
           window.location.reload();
         }
       } else {
