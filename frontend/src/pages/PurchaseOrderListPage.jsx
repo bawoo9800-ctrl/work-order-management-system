@@ -118,7 +118,13 @@ const PurchaseOrderListPage = () => {
     
     if (order.images) {
       try {
-        const parsed = typeof order.images === 'string' ? JSON.parse(order.images) : order.images;
+        let parsed = typeof order.images === 'string' ? JSON.parse(order.images) : order.images;
+        
+        // 이중 인코딩 체크: 파싱 후에도 여전히 문자열이면 한 번 더 파싱
+        if (typeof parsed === 'string') {
+          console.log('🔄 이중 인코딩 감지 (handleImageClick), 2차 파싱 시도');
+          parsed = JSON.parse(parsed);
+        }
         
         // parsed가 배열인지 확인
         if (Array.isArray(parsed)) {
@@ -229,6 +235,14 @@ const PurchaseOrderListPage = () => {
     if (typeof parsedImages === 'string') {
       try {
         parsedImages = JSON.parse(parsedImages);
+        console.log('✅ 1차 JSON 파싱 (handleImagesAdded):', parsedImages, '타입:', typeof parsedImages);
+        
+        // 이중 인코딩 체크
+        if (typeof parsedImages === 'string') {
+          console.log('🔄 이중 인코딩 감지 (handleImagesAdded), 2차 파싱 시도');
+          parsedImages = JSON.parse(parsedImages);
+          console.log('✅ 2차 파싱 성공:', parsedImages);
+        }
       } catch (e) {
         console.error('이미지 파싱 실패:', e);
         parsedImages = [];
@@ -281,7 +295,14 @@ const PurchaseOrderListPage = () => {
         if (typeof latestImages === 'string') {
           try {
             latestImages = JSON.parse(latestImages);
-            console.log('✅ JSON 파싱 성공, latestImages:', latestImages);
+            console.log('✅ 1차 JSON 파싱 성공, latestImages:', latestImages, '타입:', typeof latestImages);
+            
+            // 이중 인코딩 체크: 파싱 후에도 여전히 문자열이면 한 번 더 파싱
+            if (typeof latestImages === 'string') {
+              console.log('🔄 이중 인코딩 감지, 2차 파싱 시도');
+              latestImages = JSON.parse(latestImages);
+              console.log('✅ 2차 JSON 파싱 성공, latestImages:', latestImages);
+            }
           } catch (e) {
             console.error('최신 이미지 파싱 실패:', e);
             latestImages = [];
