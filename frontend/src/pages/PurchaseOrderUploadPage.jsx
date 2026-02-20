@@ -397,7 +397,7 @@ function PurchaseOrderUploadPage() {
       // 입력 필드 초기화 (전송자명은 유지)
       setVendorName('');
       setSiteName('');
-      setOrderDate(today);
+      setOrderDate(getTodayDate());
       setMemo('');
       
       // 파일 input 초기화
