@@ -921,8 +921,8 @@ const styles = {
   },
   dropZone: {
     width: '100%',
-    minHeight: '80px',
-    padding: '12px 10px',
+    minHeight: '40px',
+    padding: '6px 5px',
     border: '3px dashed #2196F3',
     borderRadius: '12px',
     backgroundColor: '#f8f9fa',
@@ -941,14 +941,14 @@ const styles = {
     textAlign: 'center',
   },
   dropZoneIcon: {
-    fontSize: '48px',
-    marginBottom: '15px',
+    fontSize: '24px',
+    marginBottom: '8px',
   },
   dropZoneText: {
     fontSize: '16px',
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: '8px',
+    marginBottom: '4px',
   },
   dropZoneHint: {
     fontSize: '14px',
