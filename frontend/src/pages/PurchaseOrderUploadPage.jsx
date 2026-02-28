@@ -920,9 +920,9 @@ const styles = {
     display: 'none',
   },
   dropZone: {
-    width: '50%',
-    minHeight: '100px',
-    padding: '20px 10px',
+    width: '100%',
+    minHeight: '80px',
+    padding: '12px 10px',
     border: '3px dashed #2196F3',
     borderRadius: '12px',
     backgroundColor: '#f8f9fa',
